@@ -8,7 +8,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="おんぷアイランド">
-<meta name="description" content="2年生の終わりから3・4年生で、楽譜が読めるようになるアプリ。階名・リズム・けんばんハーモニカ・リコーダー・記号・聞きとり。">
+<meta name="description" content="楽譜が読めるようになるアプリ。階名・リズム・けんばんハーモニカ・リコーダー・記号・聞きとり・共通教材の楽譜。">
 <title>おんぷアイランド</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
@@ -328,7 +328,6 @@ input{font-family:var(--fb);font-size:inherit}
   <div class="art"></div>
   <div class="logo">おんぷアイランド</div>
   <div class="tag">楽譜が読めるようになる 島めぐり</div>
-  <div class="hint">2年生の おわり〜3・4年生</div>
 </div>
 <div id="app"></div>
 <script src="vendor/vexflow-4.2.3.js"></script>
@@ -2501,7 +2500,7 @@ function homeScreen() {
         h('div', { class: 'nm' }, isl.name),
         h('div', { class: 'sub' }, isl.sub),
         h('div', { class: 'prog' }, h('i', { style: { width: (pg.done / pg.total * 100) + '%' } })),
-        h('div', { style: { fontSize: '.75em', color: '#4a5a75' } }, `${pg.done} / ${pg.total}　${isl.grade}`));
+        h('div', { style: { fontSize: '.75em', color: '#4a5a75' } }, `${pg.done} / ${pg.total}`));
       card.style.setProperty('--ic', isl.color);
       map.appendChild(card);
     });
@@ -2581,7 +2580,7 @@ function islandScreen(isl) {
     scr.appendChild(h('div', { class: 'body' }, h('div', { class: 'wrap', style: { maxWidth: '760px' } },
       h('div', { class: 'card', style: { display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '18px', background: `linear-gradient(135deg, #fff, color-mix(in srgb, ${isl.color} 22%, #fff))` } },
         h('div', { style: { width: '120px', flex: '0 0 auto' } }, svgEl(islandArt(isl.id))),
-        h('div', null, h('div', { class: 'h2' }, isl.name), h('div', { class: 'muted', style: { fontSize: '.9em' } }, isl.sub), h('span', { class: 'pill', style: { marginTop: '6px' } }, isl.grade))),
+        h('div', null, h('div', { class: 'h2' }, isl.name), h('div', { class: 'muted', style: { fontSize: '.9em' } }, isl.sub))),
       list)));
     const a = scr.querySelector('.card svg'); if (a) { a.style.width = '100%'; a.style.height = 'auto'; }
   });
