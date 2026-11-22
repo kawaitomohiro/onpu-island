@@ -677,13 +677,14 @@ function renderStaff(target, o) {
   if (o.time) {
     const [nn, dd] = o.time.split('/').map(Number);
     const cap = nn * 4 / dd;
-    let cur = [], acc = 0;
-    notes.forEach((nt, i) => { cur.push(i); acc += BEATS[nt.d]; if (acc >= cap - 1e-6) { measures.push(cur); cur = []; acc = 0; } });
+    let cur = [], acc = 0, capNow = o.pickup > 0 ? o.pickup : cap; // 弱起（アウフタクト）は さいしょの小節だけ みじかい
+    notes.forEach((nt, i) => { cur.push(i); acc += BEATS[nt.d]; if (acc >= capNow - 1e-6) { measures.push(cur); cur = []; acc = 0; capNow = cap; } });
     if (cur.length) measures.push(cur);
   } else measures = [notes.map((_, i) => i)];
   if (!measures.length) measures = [[]];
   const top = o.top != null ? o.top : (o.volta || o.labels ? 46 : 30);
-  const noteW = o.noteW || 52;
+  const narrow = typeof window !== 'undefined' && window.innerWidth < 640;
+  const noteW = (narrow && o.narrowNoteW) || o.noteW || 52;
   const extra = (o.clef === false ? 0 : 44) + (o.time && !o.hideTime ? 34 : 0);
   const widths = measures.map((m, mi) => {
     let w = Math.max(o.minMW || 96, m.reduce((a, i) => a + (notes[i].d === 'w' ? noteW * 1.6 : noteW) * (notes[i].acc ? 1.25 : 1), 0) + 30);
@@ -695,8 +696,8 @@ function renderStaff(target, o) {
   const CLEF = o.clef === 'bass' ? 'bass' : 'treble';
   let rows = [measures.map((_, i) => i)];
   if (o.fit && measures.length > 1) {
-    const cw = target.clientWidth || (target.parentNode && target.parentNode.clientWidth) || 700;
-    const rowMax = Math.max(260, cw / (o.minScale || 1.45));
+    const cw = target.clientWidth || (target.parentNode && target.parentNode.clientWidth) || o.fitW || Math.min(700, (typeof window !== 'undefined' ? window.innerWidth - 60 : 700)); // まだ画面に のっていない時は 画面のはばで
+    const rowMax = Math.max(260, cw / ((narrow && o.narrowMinScale) || o.minScale || 1.45));
     rows = []; let cur = [], w = 0;
     measures.forEach((_, mi) => {
       const mw = widths[mi] + (cur.length === 0 && mi > 0 ? CLEFW : 0);
@@ -779,7 +780,7 @@ function renderStaff(target, o) {
   const nameEls = [];
   if (o.names) {
     notes.forEach((nt, i) => {
-      if (nt.s == null) { nameEls.push(null); return; }
+      if (nt.s == null || (i > 0 && notes[i - 1].tie)) { nameEls.push(null); return; } // タイのつづきには 名前を書かない
       const t = document.createElementNS(NS, 'text');
       t.setAttribute('x', nx[i]); t.setAttribute('y', line4 + noteRow[i] * rowH + 64);
       t.setAttribute('text-anchor', 'middle');
@@ -1983,6 +1984,419 @@ const ISLANDS = [
     ]
   }
 ];
+/* ALL_STAGES は 04b_kyotsu.js（うたの図書館を足したあと）で作る */
+
+
+// 小学校音楽 歌唱共通教材（平成29年告示）のうち著作権の切れた23曲の旋律データ（歌詞なし）
+// 作成 2026-11-22。音の高さ s は移動ド（主音＝ド＝0）、範囲 -3〜12。N(s,長さ,{acc,tie}) / R(長さ) は読み込み側で定義する。
+// 資料の略記: Wikipedia＝日本語版の楽譜（LilyPond）／リツ歌唱DB＝波音リツ歌唱データベースのMusicXML／gakufu＝kalz2q/gakufu のLilyPond
+// 1年「うみ」は作曲者の保護期間中のため除外。かくれんぼ・越天楽今様は資料が見つからず notes が空。
+//
+// 出どころ [かたつむり]: https://github.com/kalz2q/gakufu/blob/master/katatsumuri.ly / (参考・音の数と最小音符だけ) https://www.asahi-net.or.jp/~hb9t-ktd/music/Japan/Studio/Score/diatonic_only_old.html
+// 出どころ [日のまる]: https://github.com/kalz2q/gakufu/blob/master/hinomaru.ly / (参考・使用音数だけ。食い違いあり) https://www.asahi-net.or.jp/~hb9t-ktd/music/Japan/Studio/Score/diatonic_only_old.html
+// 出どころ [ひらいたひらいた]: https://github.com/oatsu-gh/utau-namineritsu-singing/blob/master/data/hiraita_hiraita.musicxml / https://github.com/kalz2q/gakufu/blob/master/hiraitahiraita.ly
+// 出どころ [かくれんぼ]: なし（未作成）
+// 出どころ [春がきた]: https://ja.wikipedia.org/wiki/春が来た / https://github.com/oatsu-gh/utau-namineritsu-singing/blob/master/data/haruga_kita.musicxml / https://github.com/kalz2q/gakufu/blob/master/harugakita.ly
+// 出どころ [虫のこえ]: https://ja.wikipedia.org/wiki/蟲のこゑ / https://github.com/oatsu-gh/utau-namineritsu-singing/blob/master/data/mushino_koe.musicxml / https://github.com/kalz2q/gakufu/blob/master/mushinokoe.ly
+// 出どころ [夕やけこやけ]: https://ja.wikipedia.org/wiki/夕焼小焼 / https://github.com/kalz2q/gakufu/blob/master/yuyakekoyake.ly
+// 出どころ [うさぎ]: https://ja.wikipedia.org/wiki/うさぎ_(童謡) / https://github.com/oatsu-gh/utau-namineritsu-singing/blob/master/data/usagi.musicxml / https://github.com/kalz2q/gakufu/blob/master/usagi.ly
+// 出どころ [茶つみ]: https://ja.wikipedia.org/wiki/茶摘み / https://github.com/oatsu-gh/utau-namineritsu-singing/blob/master/data/chatsumi.musicxml / https://github.com/kalz2q/gakufu/blob/master/chatsumi.ly
+// 出どころ [春の小川]: https://ja.wikipedia.org/wiki/春の小川 / https://github.com/oatsu-gh/utau-namineritsu-singing/blob/master/data/haruno_ogawa.musicxml / https://github.com/kalz2q/gakufu/blob/master/harunoogawa.ly
+// 出どころ [ふじ山]: https://ja.wikipedia.org/wiki/ふじの山 / https://github.com/kalz2q/gakufu/blob/master/fujisan.ly
+// 出どころ [さくらさくら]: https://github.com/oatsu-gh/utau-namineritsu-singing/blob/master/data/sakura_sakura.musicxml / https://github.com/kalz2q/gakufu/blob/master/sakura.ly / https://github.com/syntithenai/abc2book/blob/main/abcresources/jc/abc_tune_jc_201359783.abc (Musica Viva) / https://www.folktunefinder.com/tunes/152703 (abc2book 内 abc_tune_folktunefinder_152703.txt)
+// 出どころ [とんび]: https://github.com/oatsu-gh/utau-namineritsu-singing/blob/master/data/tonbi.musicxml / https://github.com/kalz2q/gakufu/blob/master/tonbi.ly
+// 出どころ [まきばの朝]: https://github.com/kalz2q/gakufu/blob/master/makibanoasa.ly
+// 出どころ [もみじ]: https://ja.wikipedia.org/wiki/もみじ_(曲) / https://github.com/oatsu-gh/utau-namineritsu-singing/blob/master/data/momiji.musicxml / https://github.com/kalz2q/gakufu/blob/master/momiji.ly
+// 出どころ [こいのぼり]: https://github.com/kalz2q/gakufu/blob/master/koinoboriiraka.ly
+// 出どころ [子もり歌]: https://ja.wikipedia.org/wiki/江戸子守唄 / https://github.com/kalz2q/gakufu/blob/master/edokomori.ly
+// 出どころ [スキーの歌]: https://github.com/kalz2q/gakufu/blob/master/skiinouta.ly
+// 出どころ [冬げしき]: https://github.com/kalz2q/gakufu/blob/master/fuyugeshiki.ly
+// 出どころ [越天楽今様]: なし（未作成）
+// 出どころ [おぼろ月夜]: https://ja.wikipedia.org/wiki/朧月夜_(歌曲) / https://github.com/oatsu-gh/utau-namineritsu-singing/blob/master/data/oborodukiyo.musicxml / https://github.com/kalz2q/gakufu/blob/master/oborodukiyo.ly
+// 出どころ [ふるさと]: https://ja.wikipedia.org/wiki/故郷_(唱歌) / https://github.com/oatsu-gh/utau-namineritsu-singing/blob/master/data/furusato.musicxml / https://github.com/kalz2q/gakufu/blob/master/furusato.ly
+// 出どころ [われは海の子]: https://github.com/oatsu-gh/utau-namineritsu-singing/blob/master/data/warewa_uminoko.musicxml / https://github.com/kalz2q/gakufu/blob/master/warewaumi.ly
+const KYOTSU = [
+  { id: 'katatsumuri', grade: 1, title: 'かたつむり', origin: '文部省唱歌', time: '2/4', pickup: 0,
+    notes: [
+      N(4,'8d'), N(4,'16'), N(4,'8'), N(2,'8'), N(0,'8d'), N(0,'16'), N(0,'8'), N(1,'8'), N(2,'8d'), N(2,'16'),
+      N(1,'8'), N(0,'8'), N(1,'q'), R('q'), N(2,'8d'), N(3,'16'), N(4,'8'), N(5,'8'), N(4,'8d'), N(4,'16'),
+      N(4,'8'), N(2,'8'), N(1,'8d'), N(1,'16'), N(0,'8'), N(1,'8'), N(2,'q'), R('q'), N(4,'8'), N(7,'8'),
+      N(7,'8'), N(4,'8'), N(2,'8'), N(4,'8'), N(4,'8'), N(2,'8'), N(0,'8'), N(2,'8'), N(2,'8d'), N(1,'16'),
+      N(0,'q'), R('q'),
+    ],
+    phrases: [[0,13], [14,27], [28,41]],
+    memo: '資料1つ（gakufu）。音楽研究所の一覧（使用音7つ・最小は16分音符）とは合う。要確認: 全体（2つ目の楽譜で照合できていない）' },
+  { id: 'hinomaru', grade: 1, title: '日のまる', origin: '文部省唱歌', time: '2/4', pickup: 0,
+    notes: [
+      N(0,'q'), N(0,'q'), N(1,'q'), N(1,'q'), N(2,'q'), N(2,'q'), N(1,'q'), R('q'), N(2,'q'), N(2,'q'),
+      N(4,'q'), N(4,'q'), N(5,'q'), N(5,'q'), N(4,'q'), R('q'), N(5,'q'), N(5,'q'), N(4,'q'), N(4,'q'),
+      N(2,'q'), N(0,'q'), N(1,'q'), R('q'), N(4,'q'), N(4,'q'), N(2,'q'), N(0,'q'), N(1,'q'), N(2,'q'),
+      N(0,'q'), R('q'),
+    ],
+    phrases: [[0,7], [8,15], [16,23], [24,31]],
+    memo: '資料1つ（gakufu）。音楽研究所の一覧は「使用音6つ」とあり、この旋律（ドレミソラの5つ）と食い違う。要確認: 全体' },
+  { id: 'hiraita', grade: 1, title: 'ひらいたひらいた', origin: 'わらべうた', time: '4/4', pickup: 0,
+    notes: [
+      N(5,'h'), N(5,'8'), N(5,'8'), N(4,'q'), N(5,'q'), N(5,'8'), N(4,'8'), N(2,'h'), N(5,'q'), N(4,'8'),
+      N(4,'8'), N(5,'q'), N(6,'8'), N(6,'8'), N(5,'q'), N(5,'8'), N(4,'8'), N(2,'h'), N(5,'8'), N(5,'8'),
+      N(5,'8'), N(5,'8'), N(5,'q'), N(6,'8'), N(6,'8'), N(5,'q'), N(5,'8'), N(4,'8'), N(2,'h'), N(5,'q'),
+      N(5,'8'), N(5,'8'), N(4,'q'), N(4,'q'), N(4,'q'), N(4,'q'), N(4,'q'), N(4,'q'), N(6,'q'), N(6,'8'),
+      N(6,'8'), N(8,'q'), N(6,'8'), N(6,'8'), N(5,'h'), N(6,'q'), N(5,'q'), N(4,'h'), N(4,'h'), N(5,'h'),
+      R('h'),
+    ],
+    phrases: [[0,17], [18,37], [38,50]],
+    memo: 'リツ歌唱DB（4/4）を元にした。gakufuは2/4・音の長さ半分で、1・5・7小節目の音の数が少ない（1音に2文字）。11小節目はgakufuに合わせソ2分×2（リツは付点2分＋4分）。要確認: 1小節目のリズム、11小節目、教科書の拍子（2/4か4/4か）' },
+  { id: 'kakurenbo', grade: 2, title: 'かくれんぼ', origin: '文部省唱歌（林柳波 作詞・下総皖一 作曲）', time: '2/4', pickup: 0,
+    notes: [],
+    phrases: [],
+    memo: '旋律を文字やデータで読める資料が見つからず未作成（notes は空）。要確認: 全体' },
+  { id: 'harugakita', grade: 2, title: '春がきた', origin: '文部省唱歌', time: '4/4', pickup: 0,
+    notes: [
+      N(4,'q'), N(2,'8'), N(3,'8'), N(4,'q'), N(5,'q'), N(4,'q'), N(2,'8'), N(3,'8'), N(4,'q'), N(7,'q'),
+      N(5,'q'), N(4,'q'), N(2,'qd'), N(0,'8'), N(1,'hd'), R('q'), N(4,'q'), N(5,'8'), N(4,'8'), N(2,'q'),
+      N(4,'q'), N(7,'q'), N(8,'8'), N(7,'8'), N(5,'q'), N(7,'q'), N(4,'q'), N(9,'q'), N(8,'qd'), N(4,'8'),
+      N(7,'hd'), R('q'),
+    ],
+    phrases: [[0,15], [16,31]],
+    memo: '3資料で一致。最後は付点2分＋4分休符（gakufuは全音符）' },
+  { id: 'mushinokoe', grade: 2, title: '虫のこえ', origin: '文部省唱歌', time: '2/4', pickup: 0,
+    notes: [
+      N(4,'8'), N(2,'8'), N(5,'8'), N(5,'8'), N(4,'8'), N(4,'8'), N(2,'q'), N(7,'8'), N(7,'8'), N(5,'8'),
+      N(5,'8'), N(4,'q'), R('q'), N(4,'8'), N(5,'16'), N(5,'16'), N(4,'8'), N(5,'16'), N(5,'16'), N(4,'8'),
+      N(4,'16'), N(4,'16'), N(4,'8'), R('8'), N(4,'8'), N(2,'8'), N(5,'8'), N(5,'8'), N(4,'8'), N(4,'8'),
+      N(2,'q'), N(7,'8'), N(7,'8'), N(5,'8'), N(5,'8'), N(4,'q'), R('q'), N(4,'8'), N(5,'8'), N(4,'8'),
+      N(5,'8'), N(4,'8'), N(4,'8'), N(4,'8'), R('8'), N(4,'q'), N(2,'8'), N(5,'8'), N(4,'8'), N(4,'8'),
+      N(2,'8'), N(2,'8'), N(7,'8'), N(7,'8'), N(6,'8'), N(5,'8'), N(4,'q'), R('q'), N(7,'q'), N(6,'8'),
+      N(5,'8'), N(4,'8'), N(4,'8'), N(2,'q'), N(5,'8'), N(5,'8'), N(4,'8'), N(4,'8'), N(0,'q'), R('q'),
+    ],
+    phrases: [[0,12], [13,30], [31,44], [45,57], [58,69]],
+    memo: '1番（まつむし→すずむし→あきのよなが）を通して書いた。5〜6小節目（ちんちろ…）は資料で食い違い：Wikipedia・gakufuは8分音符で「ソラソラ｜ソソソ」、リツ歌唱DBは16分音符で1文字1音。「ちん＝8分、ちろ＝16分2つ」と判断した。要確認: 5〜6小節目のリズム、6・12小節目の終わり（8分休符か、Wikipediaのようにソ4分か）' },
+  { id: 'yuyakekoyake', grade: 2, title: '夕やけこやけ', origin: '中村雨紅 作詞・草川信 作曲', time: '2/4', pickup: 0,
+    notes: [
+      N(4,'q'), N(4,'8'), N(5,'8'), N(4,'8'), N(4,'8'), N(4,'8'), N(2,'8'), N(0,'8'), N(0,'8'), N(1,'8'),
+      N(2,'8'), N(1,'qd'), R('8'), N(2,'q'), N(2,'8'), N(4,'8'), N(5,'8'), N(7,'8'), N(7,'8'), N(5,'8'),
+      N(4,'8'), N(4,'8'), N(5,'8'), N(4,'8'), N(7,'qd'), R('8'), N(7,'8d'), N(8,'16'), N(7,'8'), N(5,'8'),
+      N(7,'8'), N(7,'8'), N(4,'8'), N(4,'8'), N(5,'8'), N(4,'8'), N(5,'8'), N(4,'8'), N(2,'qd'), R('8'),
+      N(4,'8'), N(2,'8'), N(1,'8'), N(0,'8'), N(1,'8'), N(1,'8'), N(0,'8'), N(1,'8'), N(2,'8'), N(4,'8'),
+      N(5,'8'), N(4,'8'), N(7,'h'),
+    ],
+    phrases: [[0,12], [13,25], [26,39], [40,52]],
+    memo: 'Wikipediaの4/4（音の長さ2倍）を2/4に直した。1小節目はWikipediaに合わせ「ソ(4分) ソ ラ」。gakufuは「ソソソラ」の8分4つ。要確認: 1小節目' },
+  { id: 'usagi', grade: 3, title: 'うさぎ', origin: '日本古謡', time: '2/4', pickup: 0,
+    notes: [
+      N(3,'q'), N(3,'8'), N(5,'8'), N(6,'8'), N(5,'8'), N(6,'8'), R('8'), N(3,'8'), N(3,'8'), N(3,'8'),
+      N(5,'8'), N(6,'8'), N(5,'8'), N(6,'8'), R('8'), N(5,'8'), N(6,'8'), N(7,'8'), N(7,'8'), N(6,'8'),
+      N(5,'16'), N(5,'16'), N(3,'8'), N(2,'8'), N(5,'8'), N(3,'8'), N(2,'q'), N(3,'8'), N(2,'8'), N(1,'q'),
+      N(2,'h'),
+    ],
+    phrases: [[0,14], [15,30]],
+    memo: '3資料で一致（gakufuは3小節目の音の数が1つ多い）。都節音階でミで終わる。階名は資料の書き方（調号なし）のまま読んだ' },
+  { id: 'chatsumi', grade: 3, title: '茶つみ', origin: '文部省唱歌', time: '4/4', pickup: 0,
+    notes: [
+      R('q'), N(-3,'q'), N(0,'q'), N(1,'q'), N(2,'qd'), N(2,'8'), N(2,'q'), N(2,'q'), N(4,'qd'), N(4,'8'),
+      N(4,'q'), N(2,'q'), N(1,'q'), N(0,'q'), N(1,'q'), R('q'), R('q'), N(2,'q'), N(2,'q'), N(4,'q'),
+      N(2,'qd'), N(2,'8'), N(2,'q'), N(1,'q'), N(2,'qd'), N(2,'8'), N(1,'q'), N(0,'q'), N(-2,'q'), N(-2,'q'),
+      N(-3,'q'), R('q'), R('q'), N(-3,'q'), N(0,'q'), N(1,'q'), N(2,'qd'), N(2,'8'), N(2,'q'), N(2,'q'),
+      N(4,'qd'), N(4,'8'), N(4,'q'), N(2,'q'), N(1,'q'), N(0,'q'), N(1,'q'), R('q'), R('q'), N(4,'q'),
+      N(4,'q'), N(2,'q'), N(1,'qd'), N(1,'8'), N(0,'q'), N(-2,'q'), N(-3,'q'), N(0,'q'), N(1,'qd'), N(2,'8'),
+      N(0,'hd'), R('q'),
+    ],
+    phrases: [[0,15], [16,31], [32,47], [48,61]],
+    memo: '3資料で一致（ト長調→ド＝ソの音に移した）。各段の頭の4分休符は資料どおり' },
+  { id: 'harunoogawa', grade: 3, title: '春の小川', origin: '文部省唱歌', time: '4/4', pickup: 0,
+    notes: [
+      N(2,'q'), N(4,'q'), N(5,'q'), N(4,'q'), N(2,'q'), N(4,'q'), N(7,'q'), N(7,'q'), N(5,'q'), N(5,'q'),
+      N(4,'q'), N(2,'q'), N(0,'q'), N(1,'q'), N(2,'q'), R('q'), N(2,'q'), N(4,'q'), N(5,'q'), N(4,'q'),
+      N(2,'q'), N(4,'q'), N(7,'q'), N(7,'q'), N(5,'q'), N(5,'q'), N(4,'q'), N(2,'q'), N(1,'q'), N(2,'q'),
+      N(0,'q'), R('q'), N(1,'q'), N(2,'q'), N(1,'q'), N(4,'q'), N(5,'q'), N(5,'q'), N(4,'q'), N(5,'q'),
+      N(7,'q'), N(7,'q'), N(6,'q'), N(5,'q'), N(4,'q'), N(4,'q'), N(2,'q'), R('q'), N(2,'q'), N(4,'q'),
+      N(5,'q'), N(4,'q'), N(2,'q'), N(4,'q'), N(7,'q'), N(7,'q'), N(5,'q'), N(5,'q'), N(4,'q'), N(2,'q'),
+      N(1,'q'), N(2,'q'), N(0,'q'), R('q'),
+    ],
+    phrases: [[0,15], [16,31], [32,47], [48,63]],
+    memo: '3資料で一致' },
+  { id: 'fujisan', grade: 3, title: 'ふじ山', origin: '文部省唱歌', time: '4/4', pickup: 0,
+    notes: [
+      N(4,'qd'), N(4,'8'), N(5,'q'), N(4,'q'), N(2,'q'), N(0,'8'), N(1,'8'), N(2,'q'), R('q'), N(1,'qd'),
+      N(4,'8'), N(4,'q'), N(3,'8'), N(2,'8'), N(1,'hd'), R('q'), N(4,'qd'), N(4,'8'), N(2,'q'), N(0,'q'),
+      N(5,'qd'), N(6,'8'), N(7,'q'), N(5,'q'), N(4,'qd'), N(5,'8'), N(4,'8'), N(3,'8'), N(2,'8'), N(1,'8'),
+      N(0,'hd'), R('q'), N(1,'qd'), N(1,'8'), N(1,'q'), N(1,'q'), N(0,'8'), N(1,'8'), N(2,'8'), N(3,'8'),
+      N(4,'q'), R('q'), N(5,'qd'), N(6,'8'), N(7,'q'), N(5,'q'), N(4,'hd'), R('q'), N(7,'h'), N(5,'q'),
+      N(3,'q'), N(2,'h'), N(5,'q'), N(4,'q'), N(3,'q'), N(2,'q'), N(1,'qd'), N(0,'8'), N(0,'hd'), R('q'),
+    ],
+    phrases: [[0,15], [16,31], [32,47], [48,59]],
+    memo: '2資料。2・10小節目の終わり（Wikipedia＝4分＋4分休符／gakufu＝2分）、14小節目（Wikipedia＝ミ2分／gakufu＝ミ付点4分＋8分）で食い違い。Wikipediaに合わせた。要確認: 2・10・14小節目' },
+  { id: 'sakurasakura', grade: 4, title: 'さくらさくら', origin: '日本古謡', time: '4/4', pickup: 0,
+    notes: [
+      N(5,'q'), N(5,'q'), N(6,'h'), N(5,'q'), N(5,'q'), N(6,'h'), N(5,'q'), N(6,'q'), N(7,'q'), N(6,'q'),
+      N(5,'q'), N(6,'8'), N(5,'8'), N(3,'h'), N(2,'q'), N(0,'q'), N(2,'q'), N(3,'q'), N(2,'q'), N(2,'8'),
+      N(0,'8'), N(-1,'h'), N(5,'q'), N(6,'q'), N(7,'q'), N(6,'q'), N(5,'q'), N(6,'8'), N(5,'8'), N(3,'h'),
+      N(2,'q'), N(0,'q'), N(2,'q'), N(3,'q'), N(2,'q'), N(2,'8'), N(0,'8'), N(-1,'h'), N(5,'q'), N(5,'q'),
+      N(6,'h'), N(5,'q'), N(5,'q'), N(6,'h'), N(2,'q'), N(3,'q'), N(6,'8'), N(5,'8'), N(3,'q'), N(2,'hd'),
+      R('q'),
+    ],
+    phrases: [[0,13], [14,29], [30,37], [38,50]],
+    memo: '4資料で音の高さは一致。「さくら」のシは2分音符（リツ歌唱DBは4分＋休符）。最後のミは付点2分＋4分休符（資料により2分＋2分休符）。要確認: 最後の小節の長さ' },
+  { id: 'tonbi', grade: 4, title: 'とんび', origin: '葛原しげる 作詞・梁田貞 作曲', time: '4/4', pickup: 0,
+    notes: [
+      N(0,'qd'), N(1,'8'), N(2,'8'), N(4,'8'), N(5,'8'), N(4,'8'), N(7,'h'), N(5,'h'), N(4,'qd'), N(2,'8'),
+      N(5,'8'), N(4,'8'), N(2,'8'), N(0,'8'), N(1,'hd'), R('q'), N(0,'qd'), N(1,'8'), N(2,'8'), N(4,'8'),
+      N(5,'8'), N(4,'8'), N(7,'h'), N(5,'h'), N(4,'qd'), N(2,'8'), N(5,'8'), N(4,'8'), N(1,'8'), N(2,'8'),
+      N(0,'hd'), R('q'), N(7,'qd', { tie: true }), N(7,'16'), N(4,'16'), N(4,'h'), N(5,'qd', { tie: true }), N(5,'16'), N(2,'16'), N(2,'h'),
+      N(7,'qd', { tie: true }), N(7,'16'), N(4,'16'), N(4,'h'), N(5,'qd', { tie: true }), N(5,'16'), N(2,'16'), N(2,'h'), N(0,'qd'), N(1,'8'),
+      N(2,'8'), N(4,'8'), N(5,'8'), N(4,'8'), N(7,'hd'), R('q'), N(7,'qd'), N(5,'8'), N(4,'8'), N(2,'8'),
+      N(1,'8'), N(2,'8'), N(0,'hd'), R('q'),
+    ],
+    phrases: [[0,15], [16,31], [32,47], [48,63]],
+    memo: '2資料で音の高さは一致。リツ歌唱DBは「ん」を別の音に分けて歌っているので、gakufuの長さに合わせた（2小節目＝高ド2分、9〜12小節目＝複付点4分＋16分。複付点は付点4分＋16分のタイで表した）' },
+  { id: 'makibanoasa', grade: 4, title: 'まきばの朝', origin: '文部省唱歌', time: '4/4', pickup: 0,
+    notes: [
+      N(4,'q'), N(2,'8'), N(3,'8'), N(4,'q'), N(5,'q'), N(4,'qd'), N(4,'8'), N(4,'q'), R('q'), N(5,'q'),
+      N(5,'8'), N(6,'8'), N(7,'q'), N(8,'q'), N(4,'h'), R('q'), N(4,'q'), N(5,'qd'), N(5,'8'), N(3,'q'),
+      N(5,'q'), N(7,'h'), N(4,'q'), N(2,'q'), N(4,'qd'), N(5,'8'), N(4,'q'), N(2,'q'), N(1,'hd'), R('q'),
+      N(0,'qd'), N(0,'8'), N(0,'q'), N(1,'q'), N(2,'8'), N(4,'8'), N(2,'8'), N(1,'8'), N(0,'q'), N(2,'q'),
+      N(4,'h'), N(5,'q'), N(5,'q'), N(4,'h'), R('q'), N(4,'q'), N(7,'h'), N(4,'q'), N(4,'q'), N(5,'q'),
+      N(5,'q'), N(4,'q'), N(2,'q'), N(4,'h'), N(1,'qd'), N(1,'8'), N(0,'h'), R('q'), N(0,'q'), N(0,'qd'),
+      N(1,'8'), N(2,'8'), N(4,'8'), N(5,'q'), N(7,'h'), N(4,'h'), N(2,'h'), N(1,'h'), N(0,'hd'), R('q'),
+    ],
+    phrases: [[0,15], [16,29], [30,44], [45,57], [58,69]], // 次の段の弱起（16・58）は 次の段へ
+    memo: '資料1つ（gakufu）。要確認: 全体（特に1〜2小節目のリズム、9〜12小節目が低い音域でよいか）' },
+  { id: 'momiji', grade: 4, title: 'もみじ', origin: '文部省唱歌', time: '4/4', pickup: 0,
+    notes: [
+      N(2,'q'), N(1,'8'), N(0,'8'), N(1,'q'), N(2,'q'), N(0,'h'), N(-3,'q'), R('q'), N(0,'q'), N(-1,'8'),
+      N(0,'8'), N(1,'q'), N(4,'q'), N(2,'q'), N(1,'8'), N(0,'8'), N(1,'q'), R('q'), N(2,'q'), N(1,'8'),
+      N(0,'8'), N(1,'q'), N(2,'q'), N(0,'h'), N(-3,'q'), R('q'), N(0,'q'), N(-1,'8'), N(0,'8'), N(1,'q'),
+      N(4,'q'), N(2,'q'), N(1,'q'), N(0,'q'), R('q'), N(4,'q'), N(2,'8'), N(3,'8'), N(4,'q'), N(5,'q'),
+      N(4,'h'), N(2,'q'), R('q'), N(4,'q'), N(5,'8'), N(4,'8'), N(2,'q'), N(1,'8'), N(0,'8'), N(1,'q'),
+      N(2,'q'), N(1,'q'), R('q'), N(4,'q'), N(5,'8'), N(4,'8'), N(2,'q'), N(1,'q'), N(0,'h'), N(-3,'q'),
+      R('q'), N(0,'q'), N(-1,'8'), N(0,'8'), N(2,'q'), N(1,'q'), N(0,'hd'), R('q'),
+    ],
+    phrases: [[0,17], [18,34], [35,52], [53,67]],
+    memo: '3資料で一致（2部合唱の上の旋律）' },
+  { id: 'koinobori', grade: 5, title: 'こいのぼり', origin: '文部省唱歌（甍の波と雲の波）', time: '4/4', pickup: 0,
+    notes: [
+      N(0,'8d'), N(1,'16'), N(2,'8d'), N(3,'16'), N(4,'qd'), N(3,'8'), N(2,'8d'), N(3,'16'), N(1,'8d'), N(3,'16'),
+      N(2,'h'), N(0,'8d'), N(1,'16'), N(2,'8d'), N(3,'16'), N(2,'q'), N(0,'q'), N(1,'hd'), R('q'), N(0,'8d'),
+      N(1,'16'), N(2,'8d'), N(3,'16'), N(4,'qd'), N(3,'8'), N(2,'8d'), N(3,'16'), N(1,'8d'), N(3,'16'), N(2,'h'),
+      N(0,'8d'), N(1,'16'), N(2,'8d'), N(3,'16'), N(4,'q'), N(5,'q'), N(4,'hd'), R('q'), N(2,'q'), N(2,'q'),
+      N(2,'qd'), N(1,'8'), N(0,'8d'), N(2,'16'), N(1,'8d'), N(0,'16'), N(-2,'q'), R('q'), N(-3,'q'), N(0,'8'),
+      N(1,'8'), N(0,'q'), N(1,'q'), N(2,'hd'), R('q'), N(5,'h'), N(4,'q'), N(3,'q'), N(2,'8d'), N(3,'16'),
+      N(1,'8d'), N(3,'16'), N(2,'q'), N(0,'q'), N(-3,'q'), N(0,'8'), N(1,'8'), N(2,'qd'), N(1,'8'), N(0,'hd'),
+      R('q'),
+    ],
+    phrases: [[0,18], [19,37], [38,54], [55,70]],
+    memo: '文部省唱歌「甍の波と雲の波」の方。資料1つ（gakufu）。要確認: 全体' },
+  { id: 'komoriuta', grade: 5, title: '子もり歌', origin: '日本古謡（陰旋法）', time: '4/4', pickup: 0,
+    notes: [
+      N(3,'qd'), N(3,'8'), N(3,'q'), N(2,'q'), R('8'), N(3,'8'), N(5,'q'), N(3,'q'), N(2,'q'), R('8'),
+      N(0,'8'), N(2,'8'), N(3,'8'), N(5,'q'), N(3,'8'), N(5,'8'), N(2,'hd'), R('q'), N(-2,'qd'), N(-2,'8'),
+      N(-1,'q'), N(-2,'8'), N(-1,'8'), R('8'), N(0,'8'), N(2,'q'), N(3,'q'), N(2,'q'), R('8'), N(-2,'8'),
+      N(-1,'q'), N(0,'q'), N(-2,'q'), N(-1,'hd'), R('q'),
+    ],
+    phrases: [[0,17], [18,34]],
+    memo: '陰旋法版。Wikipedia（江戸子守唄）の音。gakufuは同じ音の並び（短3度上）だが1・5小節目のリズム（休符の位置）が違う。階名は資料の書き方（調号なし、ミ・ファ・ラ・シ・ド）のまま。要確認: 1・5小節目のリズム、教科書での階名の読み方（終わりの音をシと読むか）' },
+  { id: 'skiinouta', grade: 5, title: 'スキーの歌', origin: '林柳波 作詞・橋本国彦 作曲', time: '4/4', pickup: 0,
+    notes: [
+      N(4,'8d'), N(5,'16'), N(4,'8'), N(3,'8'), N(2,'8'), N(4,'8'), N(7,'8'), N(8,'8'), N(9,'h', { tie: true }), N(9,'8'),
+      N(4,'8'), N(10,'8'), N(9,'8'), N(8,'h', { tie: true }), N(8,'8'), N(4,'8'), N(9,'8'), N(8,'8'), N(7,'hd'), R('q'),
+      N(4,'8d'), N(5,'16'), N(4,'8'), N(3,'8'), N(2,'8'), N(4,'8'), N(7,'8'), N(8,'8'), N(9,'h', { tie: true }), N(9,'8'),
+      N(8,'8'), N(9,'8'), N(8,'8'), N(8,'h', { tie: true }), N(8,'8'), N(7,'8'), N(6,'8'), N(5,'8'), N(4,'h'), R('q'),
+      N(4,'q'), N(8,'qd'), N(8,'8'), N(8,'q'), N(9,'q'), N(8,'8'), N(7,'8'), N(6,'h'), N(4,'q'), N(7,'qd'),
+      N(6,'8'), N(7,'q'), N(8,'q'), N(7,'8'), N(8,'8'), N(9,'h'), R('q'), N(4,'8d'), N(5,'16'), N(4,'8'),
+      N(3,'8'), N(2,'8'), N(4,'8'), N(7,'8'), N(8,'8'), N(9,'h', { tie: true }), N(9,'8'), N(4,'8'), N(10,'8'), N(9,'8'),
+      N(8,'h', { tie: true }), N(8,'8'), N(4,'8'), N(9,'8'), N(8,'8'), N(7,'q'), N(4,'q'), N(7,'q'), N(8,'q'), N(9,'h'),
+      N(8,'h'), N(7,'hd'), R('q'),
+    ],
+    phrases: [[0,19], [20,39], [40,56], [57,74], [75,82]], // 9小節目の弱起（40）は 次の段へ・長い最後の段を2つに
+    memo: '資料1つ（gakufu）。主音（ト）をs=0にすると低いファ・ミがはみ出すため、1オクターブ上げて主音をs=7で書いた。要確認: 全体' },
+  { id: 'fuyugeshiki', grade: 5, title: '冬げしき', origin: '文部省唱歌', time: '3/4', pickup: 0,
+    notes: [
+      N(0,'q'), N(2,'q'), N(4,'q'), N(4,'qd'), N(3,'8'), N(2,'q'), N(1,'qd'), N(2,'8'), N(1,'8'), N(-1,'8'),
+      N(-3,'h'), R('q'), N(-3,'q'), N(-1,'q'), N(1,'q'), N(2,'qd'), N(1,'8'), N(0,'q'), N(2,'qd'), N(1,'8'),
+      N(0,'8'), N(-1,'8'), N(0,'h'), R('q'), N(1,'h'), N(-3,'q'), N(0,'8'), N(1,'8'), N(2,'8'), N(3,'8'),
+      N(4,'q'), N(5,'qd'), N(4,'8'), N(3,'8'), N(2,'8'), N(1,'h'), R('q'), N(2,'q'), N(1,'q'), N(0,'q'),
+      N(-3,'qd'), N(-2,'8'), N(-3,'q'), N(2,'qd'), N(1,'8'), N(0,'8'), N(-1,'8'), N(0,'h'), R('q'),
+    ],
+    phrases: [[0,11], [12,23], [24,36], [37,48]],
+    memo: '資料1つ（gakufu）。「ヘ長調・3/4・ドで始まり音域は低いソ〜ラ」という楽譜解説の記述とは合う。要確認: 全体' },
+  { id: 'etenrakuimayo', grade: 6, title: '越天楽今様', origin: '日本古謡（慈鎮 作歌）', time: '4/4', pickup: 0,
+    notes: [],
+    phrases: [],
+    memo: '旋律を文字やデータで読める資料が見つからず未作成（notes は空）。要確認: 全体' },
+  { id: 'oborozukiyo', grade: 6, title: 'おぼろ月夜', origin: '文部省唱歌', time: '3/4', pickup: 1,
+    notes: [
+      N(2,'8'), N(2,'8'), N(0,'qd'), N(1,'8'), N(2,'8'), N(4,'8'), N(4,'8'), N(5,'8'), N(4,'q'), N(1,'q'),
+      N(2,'qd'), N(0,'8'), N(1,'8'), N(4,'8'), N(2,'h'), N(4,'8'), N(4,'8'), N(2,'qd'), N(3,'8'), N(4,'8'),
+      N(7,'8'), N(7,'8'), N(8,'8'), N(7,'q'), N(4,'q'), N(5,'qd'), N(2,'8'), N(1,'8'), N(1,'8'), N(0,'h'),
+      N(4,'8'), N(4,'8'), N(7,'qd'), N(7,'8'), N(7,'8'), N(8,'8'), N(7,'8'), N(5,'8'), N(4,'q'), N(4,'8'),
+      N(2,'8'), N(4,'qd'), N(5,'8'), N(2,'8'), N(2,'8'), N(1,'h'), N(0,'8'), N(1,'8'), N(2,'qd'), N(0,'8'),
+      N(2,'8'), N(3,'8'), N(4,'8'), N(7,'8'), N(5,'q'), N(4,'q'), N(5,'qd'), N(2,'8'), N(1,'8'), N(1,'8'),
+      N(0,'h'),
+    ],
+    phrases: [[0,14], [15,29], [30,45], [46,60]],
+    memo: '3資料で一致。弱起（8分音符2つ＝1拍）。最後の小節は2拍' },
+  { id: 'furusato', grade: 6, title: 'ふるさと', origin: '文部省唱歌', time: '3/4', pickup: 0,
+    notes: [
+      N(0,'q'), N(0,'q'), N(0,'q'), N(1,'qd'), N(2,'8'), N(1,'q'), N(2,'q'), N(2,'q'), N(3,'q'), N(4,'h'),
+      R('q'), N(3,'q'), N(4,'q'), N(5,'q'), N(2,'qd'), N(3,'8'), N(2,'q'), N(1,'q'), N(1,'q'), N(-1,'q'),
+      N(0,'h'), R('q'), N(1,'8'), N(0,'8'), N(1,'q'), N(-3,'q'), N(0,'8'), N(1,'8'), N(2,'q'), N(2,'q'),
+      N(3,'8'), N(2,'8'), N(3,'qd'), N(5,'8'), N(4,'8'), N(3,'8'), N(2,'q'), R('q'), N(4,'q'), N(4,'q'),
+      N(4,'q'), N(0,'qd'), N(1,'8'), N(2,'q'), N(3,'q'), N(3,'q'), N(1,'q'), N(0,'h'), R('q'),
+    ],
+    phrases: [[0,10], [11,21], [22,37], [38,48]],
+    memo: '3資料で一致' },
+  { id: 'warewauminoko', grade: 6, title: 'われは海の子', origin: '文部省唱歌', time: '4/4', pickup: 0,
+    notes: [
+      N(0,'h'), N(-3,'q'), N(-3,'q'), N(0,'qd'), N(-1,'8'), N(0,'q'), N(1,'q'), N(2,'qd'), N(1,'8'), N(2,'q'),
+      N(5,'q'), N(4,'hd'), R('q'), N(5,'qd'), N(4,'8'), N(5,'q'), N(6,'q'), N(7,'qd'), N(7,'8'), N(4,'q'),
+      N(2,'q'), N(1,'q'), N(3,'q'), N(2,'qd'), N(1,'8'), N(0,'hd'), R('q'), N(1,'h'), N(1,'q'), N(1,'q'),
+      N(2,'qd'), N(3,'8'), N(4,'q'), N(4,'q'), N(5,'q'), N(7,'q'), N(6,'qd'), N(5,'8'), N(4,'hd'), R('q'),
+      N(5,'qd'), N(4,'8'), N(5,'q'), N(6,'q'), N(7,'h'), N(4,'q'), N(2,'q'), N(1,'q'), N(3,'q'), N(2,'qd'),
+      N(1,'8'), N(0,'hd'), R('q'),
+    ],
+    phrases: [[0,12], [13,26], [27,39], [40,52]],
+    memo: '2資料で一致（gakufuは1・9・14小節目を付点4分＋8分のタイで書いている。2分音符にまとめた）' },
+];
+
+/* 旋律の資料が見つからなかった曲（notes が空）は のせない */
+KYOTSU.splice(0, KYOTSU.length, ...KYOTSU.filter(s => s.notes.length));
+
+/* ===== うたの図書館（学習指導要領の 歌唱共通教材） =====
+   曲のデータは 04a_kyotsu_songs.js の KYOTSU（旋律だけ・歌詞なし）。
+   1年「うみ」は 作曲者（井上武士 1974年没）の保護期間中なので のせない。
+   ほかは 文部省唱歌（1910〜1913年ごろ）・日本古謡・1967年までに亡くなった作曲者の曲。 */
+
+const KY_GRADE_NAME = g => `${g}年`;
+const KY_MISSING = { 1: '「うみ」は 作曲した人の 著作権が まだ のこっているので 入っていないよ。', 2: '「かくれんぼ」は じゅんび中。', 6: '「越天楽今様」は じゅんび中。' };
+const kyCap = song => { const [a, b] = song.time.split('/').map(Number); return a * 4 / b; };
+const kySongs = g => KYOTSU.filter(s => s.grade === g);
+const kyTempo = song => song.tempo || (song.time === '6/8' ? 100 : song.time === '3/4' ? 100 : 92);
+const kyPer = song => song.time === '6/8' ? 6 : Number(song.time.split('/')[0]);
+function kyPhrase(song, k) { const [a, b] = song.phrases[k]; return song.notes.slice(a, b + 1); }
+/* 添字 idx の音が 小節の中の どこから始まるかを見て、その音から始めたときの「弱起の拍数」を返す */
+function kyPickupAt(song, idx) {
+  const cap = kyCap(song); let bb = 0;
+  for (let i = 0; i < idx; i++) bb += BEATS[song.notes[i].d];
+  const p = song.pickup || 0;
+  const pos = p ? (bb < p - 1e-6 ? cap - p + bb : (bb - p) % cap) : bb % cap;
+  if (pos < 1e-6 || Math.abs(pos - cap) < 1e-6) return 0;
+  return cap - pos;
+}
+function kyStaff(song, notes, pickup, extra) {
+  return Object.assign({ notes, time: song.time, pickup: pickup || 0, compound: song.time === '6/8', tempo: kyTempo(song) }, extra || {});
+}
+const kyHasAcc = ns => ns.some(n => n.acc);
+const kyPitchKey = ns => ns.filter(n => n.s != null).map(n => n.s + (n.acc || '')).join(',');
+function kyPhraseList(song, filter) {
+  return song.phrases.map((_, k) => k).filter(k => { const ns = kyPhrase(song, k); return ns.some(n => n.s != null) && (!filter || filter(ns, k)); });
+}
+
+/* 1. この楽譜は どの曲？（楽譜を読んで 曲を当てる。聞いて たしかめても よい） */
+function kyTitleQ(g) {
+  const list = kySongs(g);
+  const song = pick(list);
+  const notes = kyPhrase(song, 0);
+  const others = shuffle(list.filter(x => x !== song)).slice(0, 2);
+  return {
+    type: 'choice', prompt: 'この楽譜は どの曲の はじまり？',
+    staff: kyStaff(song, notes, song.pickup, { scale: 1.6, fit: true, end: false }),
+    play: () => Audio2.playSeq(notes, { tempo: kyTempo(song) }),
+    choices: shuffle([song].concat(others)).map(x => ({ label: x.title, ok: x === song })), wide: true,
+    hint: 'まず 階名で 読んで、心の中で 歌ってみよう。スピーカーで 聞いて たしかめても いいよ。'
+  };
+}
+/* 2. フレーズの 階名を じゅんばんに 読む */
+function kyReadQ(song) {
+  const ks = kyPhraseList(song, ns => !kyHasAcc(ns) && ns.filter(n => n.s != null).length <= 16);
+  const k = pick(ks.length ? ks : [0]);
+  const notes = kyPhrase(song, k);
+  const ss = notes.filter(n => n.s != null).map(n => n.s);
+  let lo = Math.min(...ss), hi = Math.max(...ss);
+  while (hi - lo < 4) { if (lo > -3) lo--; if (hi - lo < 4 && hi < 12) hi++; }
+  return {
+    type: 'seqNames', prompt: `「${song.title}」の 階名を じゅんばんに えらぼう`, notes, pool: rangeArr(lo, hi),
+    time: song.time, pickup: kyPickupAt(song, song.phrases[k][0]),
+    hint: '1つずつ、線の上か間かを たしかめよう。同じ高さの音は 同じ名前だよ。'
+  };
+}
+/* 3. 聞こえた フレーズは どれ？ */
+function kyEarQ(song) {
+  const ks = kyPhraseList(song);
+  const k = pick(ks);
+  const notes = kyPhrase(song, k);
+  const seen = new Set([kyPitchKey(notes)]);
+  const opts = [{ k, ok: true }];
+  shuffle(ks.filter(x => x !== k)).forEach(x => { const key = kyPitchKey(kyPhrase(song, x)); if (opts.length < 3 && !seen.has(key)) { seen.add(key); opts.push({ k: x }); } });
+  // 段が少ない曲は、同じ学年・同じ拍子の ほかの曲の段を まぜて 3つにする
+  if (opts.length < 3) shuffle(KYOTSU.filter(x => x !== song && x.grade === song.grade && x.time === song.time).concat(KYOTSU.filter(x => x !== song && x.time === song.time))).forEach(x => {
+    kyPhraseList(x).forEach(k2 => { const key = kyPitchKey(kyPhrase(x, k2)); if (opts.length < 3 && !seen.has(key)) { seen.add(key); opts.push({ song: x, k: k2 }); } });
+  });
+  if (opts.length < 2) return kyReadQ(song);
+  return {
+    type: 'choice', prompt: `「${song.title}」の 聞こえた所は どれ？`, oneCol: true,
+    play: () => Audio2.playSeq(notes, { tempo: kyTempo(song) }), autoPlay: true,
+    choices: shuffle(opts).map(o => { const sg = o.song || song; return { staff: kyStaff(sg, kyPhrase(sg, o.k), kyPickupAt(sg, sg.phrases[o.k][0]), { scale: 1.0, end: false, fit: true, fitW: Math.min(700, window.innerWidth - 70), minScale: 1.0, narrowNoteW: 34 }), ok: !!o.ok }; }), wide: true,
+    hint: 'はじまりの音の 高さと、上がるか 下がるかを 楽譜で くらべよう。'
+  };
+}
+/* 4. けんばんで ひく */
+const kyShort = ns => ns.filter(n => n.s != null).length <= 18;
+function kyKeyQ(song) {
+  const ks0 = kyPhraseList(song, kyShort), ks = ks0.length ? ks0 : kyPhraseList(song);
+  const k = pick(ks);
+  const notes = kyPhrase(song, k);
+  const ss = notes.filter(n => n.s != null).map(n => n.s);
+  return {
+    type: 'keySeq', prompt: `「${song.title}」を けんばんで ひこう`, notes, time: song.time, pickup: kyPickupAt(song, song.phrases[k][0]),
+    minStep: Math.min(...ss), maxStep: Math.max(...ss), tempo: kyTempo(song), hint: '光っている音符を ひこう。'
+  };
+}
+/* 5. 階名で 歌う */
+function kySingQ(song) {
+  const ks0 = kyPhraseList(song, kyShort);
+  const k = pick(ks0.length ? ks0 : kyPhraseList(song));
+  const notes = kyPhrase(song, k);
+  return { type: 'blowSeq', prompt: `「${song.title}」を 階名で 歌おう`, notes, kind: 'sing', time: song.time, pickup: kyPickupAt(song, song.phrases[k][0]), tempo: kyTempo(song), hint: '光っている音符を 階名で 歌おう。' };
+}
+/* 6. 拍子は いくつ？（楽譜を見て 拍子を 読む） */
+function kyTimeQ(g) {
+  const sure = kySongs(g).filter(s => !/拍子/.test(s.memo || ''));
+  const song = pick(sure.length ? sure : kySongs(g));
+  const notes = kyPhrase(song, 0);
+  const all = ['2/4', '3/4', '4/4', '6/8'];
+  const name = t => t === '6/8' ? '8分の6拍子' : `4分の${t[0]}拍子`;
+  const opts = shuffle([song.time].concat(shuffle(all.filter(t => t !== song.time)).slice(0, 2)));
+  return {
+    type: 'choice', prompt: `「${song.title}」は 何拍子？`,
+    staff: kyStaff(song, notes, song.pickup, { scale: 1.5, fit: true, hideTime: true, end: false }),
+    play: () => Audio2.playSeq(notes, { tempo: kyTempo(song), metro: true, beatsPerBar: kyPer(song), unit: song.time === '6/8' ? .5 : 1 }),
+    choices: opts.map(t => ({ label: name(t), ok: t === song.time })), wide: true,
+    hint: '小節線から 小節線までの 拍を たしてみよう。4分音符＝1拍、2分音符＝2拍、8分音符＝半拍。'
+  };
+}
+
+function kyStage(g) {
+  const list = kySongs(g);
+  return {
+    id: '9-' + g, title: `${KY_GRADE_NAME(g)}の 共通教材`, sub: list.map(s => s.title).join('・'), n: Math.max(8, list.length * 3),
+    learn: list.map((song, i) => ({
+      text: `${i === 0 ? `${KY_GRADE_NAME(g)}で みんなが 歌う曲（共通教材）の 楽譜だよ。${KY_MISSING[g] ? `<br><small>${KY_MISSING[g]}</small>` : ''}<br>` : ''}<b>「${song.title}」</b>　${song.origin}・${song.time === '6/8' ? '8分の6拍子' : `4分の${song.time[0]}拍子`}。おてほんに 合わせて、階名を 読んでみよう。`,
+      staff: kyStaff(song, song.notes, song.pickup, { names: true, scale: 1.5, fit: true, minScale: 1.0, noteW: 60, narrowNoteW: 46, narrowMinScale: 0.85 }), play: 'seq'
+    })),
+    gen: i => {
+      // 曲と 問題の種類が かたよらないように、曲は順番に・種類は ずらしながら回す
+      const song = list[i % list.length];
+      const kinds = [() => kyTitleQ(g), () => kyReadQ(song), () => kyEarQ(song), () => kyKeyQ(song), () => kyReadQ(song), () => kyTimeQ(g), () => kySingQ(song)];
+      return kinds[(i + Math.floor(i / list.length)) % kinds.length]();
+    }
+  };
+}
+const KY_GRADES = [1, 2, 3, 4, 5, 6].filter(g => KYOTSU.some(s => s.grade === g));
+if (KY_GRADES.length) ISLANDS.push({
+  id: 'i9', name: 'うたの図書館', sub: `教科書の 共通教材 ${KYOTSU.length}曲の 楽譜を 読もう`, color: '#b45309', grade: '1〜6年',
+  stages: KY_GRADES.map(kyStage)
+});
+
 const ALL_STAGES = ISLANDS.flatMap(isl => isl.stages.map(s => Object.assign(s, { island: isl })));
 function nextStage() { return ALL_STAGES.find(s => !s.extra && !Store.starsOf(s.id)) || null; }
 function islandProgress(isl) { const core = isl.stages.filter(s => !s.extra); const done = core.filter(s => Store.starsOf(s.id) > 0).length; return { done, total: core.length }; }
@@ -2203,7 +2617,7 @@ function stageScreen(st) {
       if (vis.childNodes.length) wrap.appendChild(vis);
       const doPlay = () => {
         if (!c.play) return;
-        if (c.play === 'seq' && c.staff) Audio2.playSeq(c.staff.notes, { tempo: 96, kind: c.staff.ctx === 'rec' ? 'rec' : 'piano', onNote: i => api && api.hl(i), onEnd: () => api && api.hl(-1) });
+        if (c.play === 'seq' && c.staff) Audio2.playSeq(c.staff.notes, { tempo: c.staff.tempo || 96, kind: c.staff.ctx === 'rec' ? 'rec' : 'piano', onNote: i => api && api.hl(i), onEnd: () => api && api.hl(-1) });
         else if (c.play === 'rhythm' && c.staff) { const six = c.staff.time === '6/8'; Audio2.playSeq(c.staff.notes, { tempo: six ? 60 : 84, rhythmOnly: true, metro: true, unit: six ? .5 : 1, beatsPerBar: six ? 6 : Number((c.staff.time || '4/4')[0]), onNote: i => api && api.hl(i), onEnd: () => api && api.hl(-1) }); }
         else if (typeof c.play === 'function') c.play();
       };
@@ -2389,14 +2803,14 @@ function runQuestion(q, area, done) {
 
 const Q_TYPES = {
   choice(q, box, c) {
-    const g = h('div', { class: 'choices' + (q.wide ? ' wide' : '') });
+    const g = h('div', { class: 'choices' + (q.wide ? ' wide' : ''), style: q.oneCol ? { gridTemplateColumns: '1fr', maxWidth: '760px', margin: '0 auto' } : null });
     const btns = [];
     q.choices.forEach(ch => {
       let b;
       if (ch.svg || ch.staff) {
         b = h('button', { class: 'ch svg' });
         if (ch.svg) b.appendChild(svgEl(ch.svg));
-        if (ch.staff) { const d = h('div', { class: 'vf' }); b.appendChild(d); renderStaff(d, ch.staff); d.querySelector('svg').style.maxHeight = '170px'; }
+        if (ch.staff) { const d = h('div', { class: 'vf' }); b.appendChild(d); renderStaff(d, ch.staff); d.querySelector('svg').style.maxHeight = q.oneCol ? 'none' : '170px'; }
         if (ch.sub) b.appendChild(h('div', { style: { fontSize: '1.1em' } }, ch.sub));
         if (q.rec) b.querySelector('svg').style.maxHeight = '260px';
       } else b = h('button', { class: 'ch', style: q.small ? { fontSize: '1.15em' } : null }, ch.label);
@@ -2489,13 +2903,13 @@ const Q_TYPES = {
     const sb = c.stageBox || h('div', { class: 'stage' });
     if (!c.stageBox) box.appendChild(sb);
     const sv = h('div', { class: 'vf' }); sb.insertBefore(sv, sb.firstChild);
-    const api = drawStaff(sv, { notes: q.notes, time: q.time === false ? null : '4/4', scale: 1.6, names: false, fit: true });
+    const api = drawStaff(sv, { notes: q.notes, time: q.time === false ? null : (q.time || '4/4'), pickup: q.pickup, compound: q.time === '6/8', scale: 1.6, names: false, fit: true });
     let idx = 0, miss = 0, missHere = 0;
-    const skip = () => { while (q.notes[idx] && q.notes[idx].s == null) idx++; };
+    const skip = () => { while (q.notes[idx] && (q.notes[idx].s == null || (idx > 0 && q.notes[idx - 1].tie))) idx++; }; // 休符と タイのつづきは とばす
     const mark = () => { api.groups.forEach((g, k) => { if (!g) return; g.classList.toggle('vf-hl', k === idx); g.classList.toggle('vf-ok', k < idx); }); seeNote(api, idx); };
     skip(); mark();
     const kb = makeKeyboard({
-      from: kbFrom(q.minStep), labels: false, onPress: m => {
+      from: kbFrom(q.minStep), to: Math.max(9, q.maxStep || 9), labels: false, onPress: m => {
         if (c.isDone() || idx >= q.notes.length) return;
         const want = midiOf(q.notes[idx].s, q.notes[idx].acc);
         if (m === want) {
@@ -2511,15 +2925,17 @@ const Q_TYPES = {
     });
     kb.el.classList.add('kb-stick');
     sb.appendChild(kb.el);
-    box.appendChild(h('div', { class: 'foot' }, h('button', { class: 'btn teal small', onclick: tap(() => Audio2.playSeq(q.notes, { tempo: 96, onNote: i => api.hl(i), onEnd: mark })) }, svgEl(ICON.ear), 'おてほん')));
+    box.appendChild(h('div', { class: 'foot' }, h('button', { class: 'btn teal small', onclick: tap(() => Audio2.playSeq(q.notes, { tempo: q.tempo || 96, onNote: i => api.hl(i), onEnd: mark })) }, svgEl(ICON.ear), 'おてほん')));
     box.querySelectorAll('.foot svg').forEach(s => { s.style.width = '24px'; s.style.height = '24px'; });
   },
   seqNames(q, box, c) {
     const sb = h('div', { class: 'stage' }); box.appendChild(sb);
     const sv = h('div', { class: 'vf' }); sb.appendChild(sv);
-    const api = drawStaff(sv, { notes: q.notes, names: 'blank', scale: 1.8, fit: true, noteW: 58 });
+    const api = drawStaff(sv, { notes: q.notes, names: 'blank', time: q.time || null, pickup: q.pickup, compound: q.time === '6/8', scale: 1.8, fit: true, noteW: 58 });
     let idx = 0;
-    api.hl(0);
+    const skipR = () => { while (q.notes[idx] && (q.notes[idx].s == null || (idx > 0 && q.notes[idx - 1].tie))) idx++; }; // 休符と タイのつづきは とばす
+    skipR();
+    api.hl(idx);
     const g = h('div', { class: 'choices', style: { gridTemplateColumns: 'repeat(auto-fit,minmax(min(110px,28vw),1fr))' } });
     const btns = [];
     q.pool.forEach(s => {
@@ -2532,8 +2948,8 @@ const Q_TYPES = {
           if (api.nameEls[idx]) { api.nameEls[idx].textContent = jname(s); api.nameEls[idx].setAttribute('fill', '#11894d'); api.nameEls[idx].setAttribute('font-size', jname(s).length > 2 ? 13 : 19); }
           api.groups[idx] && api.groups[idx].classList.add('vf-ok');
           btns.forEach(x => x.classList.remove('hintme'));
-          idx++;
-          if (idx >= q.notes.length) { api.hl(-1); c.ok(); } else api.hl(idx);
+          idx++; skipR();
+          if (idx >= q.notes.length) { api.hl(-1); c.ok(); } else { api.hl(idx); seeNote(api, idx); }
         } else {
           b.classList.remove('miss'); void b.offsetWidth; b.classList.add('miss');
           c.ng(t => { if (t >= 2) btns.forEach((x, k) => x.classList.toggle('hintme', q.pool[k] === want)); });
@@ -2637,11 +3053,11 @@ function blowCommon(q, box, c, notes) {
   const sb = h('div', { class: 'stage' }); box.appendChild(sb);
   const row = h('div', { class: 'learn-visual' }); sb.appendChild(row);
   const sv = h('div', { class: 'vf', style: { flex: '1 1 300px' } }); row.appendChild(sv);
-  const api = drawStaff(sv, { notes, time: seq ? '4/4' : null, names: seq ? false : true, scale: seq ? 1.6 : 2.2, ctx: q.kind === 'rec' ? 'rec' : null, fit: true });
+  const api = drawStaff(sv, { notes, time: seq ? (q.time || '4/4') : null, pickup: q.pickup, compound: q.time === '6/8', names: seq ? false : true, scale: seq ? 1.6 : 2.2, ctx: q.kind === 'rec' ? 'rec' : null, fit: true });
   const recBox = q.kind === 'rec' ? h('div', { class: 'rec', style: { width: 'min(150px,34vw)' } }) : null;
   if (recBox) row.appendChild(recBox);
   let idx = 0, hold = 0;
-  const skip = () => { while (notes[idx] && notes[idx].s == null) idx++; };
+  const skip = () => { while (notes[idx] && (notes[idx].s == null || (idx > 0 && notes[idx - 1].tie))) idx++; };
   const show = () => {
     api.groups.forEach((g, k) => { if (!g) return; g.classList.toggle('vf-hl', k === idx); g.classList.toggle('vf-ok', k < idx); });
     seeNote(api, idx);
@@ -2657,7 +3073,7 @@ function blowCommon(q, box, c, notes) {
   box.appendChild(stat);
   box.querySelectorAll('.foot svg').forEach(s => { s.style.width = '26px'; s.style.height = '26px'; s.style.color = 'inherit'; });
   const kind = q.kind === 'rec' ? 'rec' : 'piano';
-  listen.addEventListener('click', tap(() => { Mic.stop(); micOn = false; micB.disabled = false; Audio2.playSeq(notes, { tempo: 88, kind, onNote: i => api.hl(i), onEnd: show }); }));
+  listen.addEventListener('click', tap(() => { Mic.stop(); micOn = false; micB.disabled = false; Audio2.playSeq(notes, { tempo: q.tempo || 88, kind, onNote: i => api.hl(i), onEnd: show }); }));
   selfB.addEventListener('click', tap(() => { if (!c.isDone()) { Mic.stop(); c.ok(); } }));
   let micOn = false, needGap = false, gapN = 0, peak = 0;
   micB.addEventListener('click', tap(async () => {
@@ -2708,7 +3124,8 @@ function islandArt(id) {
     i5: `${sea}<path d="M20 104 L70 40 L100 80 L130 36 L180 104z" fill="#f9a8d4"/><path d="M70 40 L60 54 h20z M130 36 L120 52 h20z" fill="#fff"/><path d="M60 104 q40 -30 80 0" fill="#7fd0f2"/>`,
     i6: `${sea}<path d="M60 104 q40 -30 80 0z" fill="#9ae6d4"/><path d="M88 100 L92 40 h16 L112 100z" fill="#fff" stroke="#0f9488" stroke-width="3"/><rect x="90" y="56" width="20" height="8" fill="#ff6f4f"/><rect x="89" y="78" width="22" height="8" fill="#ff6f4f"/><path d="M86 40 h28 l-6 -14 h-16z" fill="#0f9488"/><path d="M114 30 L170 14 L170 46z" fill="#ffe08a" opacity=".85"/>`,
     i7: `${sea}<path d="M30 104 q70 -50 140 0z" fill="#f0abfc"/><path d="M84 46 q-14 0 -14 18 q0 10 8 14 q4 2 4 8 q0 10 10 10 q12 0 12 -12" fill="none" stroke="#86198f" stroke-width="6" stroke-linecap="round"/><path d="M118 52 q8 10 0 20 M128 44 q14 18 0 36" fill="none" stroke="#86198f" stroke-width="4" stroke-linecap="round"/>`,
-    i8: `${sea}<path d="M30 104 q70 -40 140 0z" fill="#fde68a"/><g transform="translate(62 30)"><rect x="6" y="24" width="64" height="46" fill="#ffd166" stroke="#b07d00" stroke-width="3"/><rect x="0" y="10" width="18" height="60" fill="#ffd166" stroke="#b07d00" stroke-width="3"/><rect x="58" y="10" width="18" height="60" fill="#ffd166" stroke="#b07d00" stroke-width="3"/><path d="M0 10 l9 -12 l9 12z M58 10 l9 -12 l9 12z" fill="#ff6f4f"/><path d="M28 70 v-18 q10 -10 20 0 v18z" fill="#8a5a2b"/><path d="M38 24 l3 -9 l3 9z" fill="#ff6f4f"/></g>`
+    i8: `${sea}<path d="M30 104 q70 -40 140 0z" fill="#fde68a"/><g transform="translate(62 30)"><rect x="6" y="24" width="64" height="46" fill="#ffd166" stroke="#b07d00" stroke-width="3"/><rect x="0" y="10" width="18" height="60" fill="#ffd166" stroke="#b07d00" stroke-width="3"/><rect x="58" y="10" width="18" height="60" fill="#ffd166" stroke="#b07d00" stroke-width="3"/><path d="M0 10 l9 -12 l9 12z M58 10 l9 -12 l9 12z" fill="#ff6f4f"/><path d="M28 70 v-18 q10 -10 20 0 v18z" fill="#8a5a2b"/><path d="M38 24 l3 -9 l3 9z" fill="#ff6f4f"/></g>`,
+    i9: `${sea}<path d="M30 104 q70 -40 140 0z" fill="#fcd9a8"/><g transform="translate(58 30)"><path d="M0 26 L42 4 L84 26z" fill="#b45309"/><rect x="6" y="26" width="72" height="44" fill="#fff7ea" stroke="#b45309" stroke-width="3"/>${[18, 42, 66].map(x => `<rect x="${x - 3}" y="30" width="6" height="40" fill="#f3d9b1"/>`).join('')}<path d="M34 70 v-16 h16 v16z" fill="#8a5a2b"/></g><g transform="translate(140 66)"><rect width="30" height="7" fill="#ef4444"/><rect x="2" y="-7" width="26" height="7" fill="#3b82f6"/><rect x="-1" y="-14" width="28" height="7" fill="#22c55e"/></g><g transform="translate(36 44)" class="float-note"><ellipse cx="8" cy="30" rx="8" ry="6" fill="#2c3550"/><rect x="14" y="4" width="3.5" height="26" fill="#2c3550"/></g>`
   };
   return `<svg viewBox="0 0 200 128">${arts[id] || sea}</svg>`;
 }
@@ -2742,7 +3159,7 @@ const World3D = {
     this.scene = this.renderer = null;
   },
   /* 島の位置（くねくねの航路） */
-  POS: [[-15, 6], [-7.5, 1], [0, 6.5], [7.5, 1], [15, 6], [7.5, -6.5], [0, -2.5], [-9, -8.5]],
+  POS: [[-15, 6], [-7.5, 1], [0, 6.5], [7.5, 1], [15, 6], [7.5, -6.5], [0, -2.5], [-9, -8.5], [-17, -3]],
   async mount(host, opt) {
     this.dispose();
     const T = THREE;
@@ -2847,7 +3264,7 @@ const World3D = {
 
     // 船（いまの場所）
     const boat = this.boat(T, mat);
-    const target = nx ? ISLANDS.indexOf(nx.island) : 7;
+    const target = nx ? ISLANDS.indexOf(nx.island) : ISLANDS.length - 1;
     const [bx, bz] = this.POS[target];
     boat.position.set(bx + 3.9, 0.2, bz + 3.2);
     scene.add(boat);
@@ -3026,6 +3443,15 @@ const World3D = {
       add(new T.BoxGeometry(0.7, 1, 0.1), '#8a5a2b', 0, 0.5, 0.81);
       const star = add(new T.OctahedronGeometry(0.35, 0), '#fff1a8', 0, 5.0, -0.3, { emissive: '#ffd54a', emissiveIntensity: 1 });
       star.scale.set(1, 1.4, 0.4);
+    } else if (id === 'i9') { // うたの図書館：本の建物と 本の山
+      add(new T.BoxGeometry(2.8, 1.8, 1.6), '#fde7c4', 0, 0.9, -0.2);
+      add(new T.ConeGeometry(2.1, 1.1, 4), '#b45309', 0, 2.35, -0.2).rotation.y = Math.PI / 4;
+      [-0.9, 0, 0.9].forEach(x => add(new T.CylinderGeometry(0.16, 0.16, 1.6, 8), '#ffffff', x, 0.8, 0.65));
+      add(new T.BoxGeometry(0.6, 0.9, 0.1), '#8a5a2b', 0, 0.45, 0.62);
+      ['#ef4444', '#3b82f6', '#22c55e', '#f59e0b'].forEach((c, k) => add(new T.BoxGeometry(0.9 - k * 0.08, 0.2, 0.62), c, 2.0, 0.12 + k * 0.21, 0.9).rotation.y = k * 0.25);
+      const note = new T.Group(); g.add(note); note.position.set(-1.9, 2.4, 0.6);
+      const head = new T.Mesh(new T.SphereGeometry(0.28, 12, 8), mat('#2c3550')); head.scale.set(1.25, 0.9, 0.8); note.add(head);
+      const stem = new T.Mesh(new T.CylinderGeometry(0.05, 0.05, 1.1, 6), mat('#2c3550')); stem.position.set(0.3, 0.55, 0); note.add(stem);
     }
     return g;
   },
@@ -3099,7 +3525,7 @@ const FRIENDS = [
   { id: 'mimi', name: 'ミミー', kind: 'rabbit', color: '#f5c2ff', ring: '#a21caf', how: '「高いのは どっち？」を クリア', cond: m => cleared(m, '7-1'), say: 'よーく 聞いてね' },
   { id: 'kuji', name: 'クジラの ラー', kind: 'whale', color: '#7cc8f0', ring: '#1e6fa3', how: '★を 30こ あつめる', cond: m => starTotal(m) >= 30, say: 'ラ〜♪ 低い声が とくい' },
   { id: 'hoshi', name: 'ほしの キララ', kind: 'star', color: '#ffe16b', ring: '#d99a00', how: 'きょうの チャレンジを 5日', cond: m => Object.keys((m && m.days) || {}).length >= 5, say: 'まいにち えらいね！' },
-  { id: 'kai', name: 'まきがいの シェル', kind: 'shell', color: '#ffd1dc', ring: '#c2410c', how: '島を 3つ ぜんぶ クリア', cond: m => [0, 1, 2, 3, 4, 5, 6, 7].filter(i => islandCleared(m, i)).length >= 3, say: '海の 音が するよ' },
+  { id: 'kai', name: 'まきがいの シェル', kind: 'shell', color: '#ffd1dc', ring: '#c2410c', how: '島を 3つ ぜんぶ クリア', cond: m => ISLANDS.map((_, i) => i).filter(i => islandCleared(m, i)).length >= 3, say: '海の 音が するよ' },
   { id: 'king', name: 'マエストロ王', kind: 'crown', color: '#ffd166', ring: '#b07d00', how: '「ふよみマスター しけん」に 合格', cond: m => cleared(m, '8-3'), say: 'きみこそ ふよみマスター！' }
 ];
 function face(cx, cy, s, mood) {
@@ -3260,7 +3686,7 @@ function teacherHome() {
       tile('#ff6f4f', iNote, '階名 フラッシュカード', '音符が出て、みんなで「ド！」。はんいと速さを えらべます。', flashMode),
       tile('#22a06b', iDrum, 'みんなで リズム打ち', 'リズム譜に合わせて、全員で手をたたきます。', rhythmAllMode),
       tile('#c026d3', iEar, '聞いて どれ クイズ', '旋律やリズムを鳴らして、①②③から えらびます。', earAllMode),
-      tile('#f08c2e', iSing, '楽譜を見て 歌う・ふく', '1音ずつ光らせて、階名で歌う・リコーダーで ふく。', singAllMode),
+      tile('#f08c2e', iSing, '楽譜を見て 歌う・ふく', '1音ずつ光らせて、階名で歌う・リコーダーで ふく。共通教材の曲も 学年ごとに 出せます。', singAllMode),
       tile('#3bb3e0', ICON.person.replace('#1f2d45', '#fff').replace('<svg ', '<svg width="28" height="28" '), 'テストプレイヤーで 見る', '子どもの画面を、テスト用の記録で ためせます。', () => { Store.data.current = 'test'; Store.save(); homeScreen(); }),
       tile('#7b5cff', ICON.gear.replace('#1f2d45', '#fff').replace('<svg ', '<svg width="28" height="28" '), '使い方', '授業での使い方・iPadで全画面にする方法。', howToDialog));
     const seg = (label, key, opts) => {
@@ -3403,10 +3829,15 @@ function earAllMode() {
 
 function singAllMode() {
   bigFrame('楽譜を見て 歌う・ふく', (wrap) => {
-    const ALL = MELODIES.concat(REC_MELODIES);
-    const recOk = m => m.notes.every(n => n.s == null || (n.s >= 0 && n.s <= 9));
-    let list = ALL;
+    const BASE = MELODIES.concat(REC_MELODIES);
+    const recOk = m => m.notes.every(n => n.s == null || (n.s >= 0 && n.s <= 9) && !n.acc);
+    let src = 'base', ALL = BASE, list = ALL;
     let mi = 0, names = true, sound = true, tempo = 84, rec = false, api = null;
+    const isKy = m => KYOTSU.includes(m);
+    const tOf = m => m.time || '4/4';
+    const tempoOf = m => Math.round((isKy(m) ? kyTempo(m) : 84) * ({ 66: .8, 84: 1, 100: 1.18 }[tempo] || 1));
+    const perOf = m => tOf(m) === '6/8' ? 6 : Number(tOf(m)[0]);
+    const setSrc = v => { src = v; ALL = v === 'base' ? BASE : KYOTSU.filter(m => m.grade === v); list = rec ? ALL.filter(recOk) : ALL; mi = 0; drawSel(); draw(); };
     const scr = h('div', { class: 'big-screen' });
     const row = h('div', { class: 'learn-visual', style: { width: '100%' } });
     const sv = h('div', { class: 'vf', style: { flex: '1 1 600px' } });
@@ -3418,24 +3849,29 @@ function singAllMode() {
     const draw = () => {
       Audio2.stopAll();
       const m = list[mi];
-      api = drawStaff(sv, { notes: m.notes, time: '4/4', names, scale: 2.6, ctx: rec ? 'rec' : null, fit: true, minScale: 2.1 });
+      if (!m) { sv.innerHTML = '<div class="muted center" style="padding:30px">リコーダーで ふける曲（低いド〜高いミ）が ありません</div>'; api = null; recBox.style.display = 'none'; return; }
+      api = drawStaff(sv, { notes: m.notes, time: tOf(m), pickup: m.pickup || 0, compound: tOf(m) === '6/8', names, scale: 2.6, ctx: rec ? 'rec' : null, fit: true, minScale: isKy(m) ? 1.15 : 2.1, noteW: isKy(m) ? 40 : undefined });
       recBox.style.display = rec ? '' : 'none';
       showRec(firstIdx(m.notes));
     };
     const firstIdx = ns => ns.findIndex(n => n.s != null);
     const showRec = i => { const n = list[mi].notes[i]; if (rec && n && n.s != null && n.s >= 0 && n.s <= 9) recBox.innerHTML = recorderSvg(fingering(n.s), { label: jname(n.s, null, 'rec') }); };
     const run = () => {
-      const m = list[mi];
+      const m = list[mi]; if (!m || !api) return;
       Audio2.stopAll();
-      if (sound) Audio2.playSeq(m.notes, { tempo, kind: rec ? 'rec' : 'piano', countIn: 4, onCount: k => { cntEl.textContent = k; }, onNote: i => { cntEl.textContent = ''; api.hl(i); showRec(i); }, onEnd: () => { api.hl(-1); xCard(); } });
-      else Audio2.playSeq(m.notes, { tempo, rhythmOnly: false, countIn: 4, metro: true, kind: 'none', onCount: k => { cntEl.textContent = k; }, onNote: i => { cntEl.textContent = ''; api.hl(i); showRec(i); }, onEnd: () => { api.hl(-1); xCard(); }, silent: true });
+      const tempo = tempoOf(m), six = tOf(m) === '6/8';
+      const countIn = six ? 6 : perOf(m), unit = six ? .5 : 1;
+      if (sound) Audio2.playSeq(m.notes, { tempo, countIn, unit, kind: rec ? 'rec' : 'piano', onCount: k => { cntEl.textContent = k; }, onNote: i => { cntEl.textContent = ''; api.hl(i); showRec(i); seeNote(api, i); }, onEnd: () => { api.hl(-1); xCard(); } });
+      else Audio2.playSeq(m.notes, { tempo, rhythmOnly: false, countIn, unit, metro: true, beatsPerBar: perOf(m), kind: 'none', onCount: k => { cntEl.textContent = k; }, onNote: i => { cntEl.textContent = ''; api.hl(i); showRec(i); seeNote(api, i); }, onEnd: () => { api.hl(-1); xCard(); }, silent: true });
     };
+    const srcRow = h('div', { class: 'row c', style: { margin: '6px 0' } },
+      segRow([['base', 'いつもの曲']].concat(KY_GRADES.map(g => [g, `共通教材 ${g}年`])), src, setSrc));
     const ctrl = h('div', { class: 'row c', style: { margin: '10px 0' } },
       segRow([[true, '階名を出す'], [false, '階名をかくす']], names, v => { names = v; draw(); }),
       segRow([[true, '音を鳴らす'], [false, 'メトロノームだけ']], sound, v => sound = v),
       segRow([[false, '歌う'], [true, 'リコーダー']], rec, v => { rec = v; const cur = list[mi]; list = rec ? ALL.filter(recOk) : ALL; mi = Math.max(0, list.indexOf(cur)); drawSel(); draw(); }),
       segRow([[66, 'ゆっくり'], [84, 'ふつう'], [100, 'はやい']], tempo, v => tempo = v));
-    wrap.append(sel, ctrl, scr, h('div', { class: 'foot' }, h('button', { class: 'btn big glow', onclick: tap(run) }, 'スタート'), h('button', { class: 'btn big ghost', onclick: tap(() => { Audio2.stopAll(); api && api.hl(-1); cntEl.textContent = ''; }) }, 'とめる')));
+    wrap.append(srcRow, sel, ctrl, scr, h('div', { class: 'foot' }, h('button', { class: 'btn big glow', onclick: tap(run) }, 'スタート'), h('button', { class: 'btn big ghost', onclick: tap(() => { Audio2.stopAll(); api && api.hl(-1); cntEl.textContent = ''; }) }, 'とめる')));
     drawSel(); draw();
   });
 }
@@ -3444,8 +3880,8 @@ function howToDialog() {
   dialog({
     title: '使い方',
     body: h('div', { style: { fontSize: '.85em', lineHeight: '1.8' } },
-      h('p', null, h('b', null, '子ども：'), '島の地図から 好きな島を えらびます。光っている島・ステージが おすすめの順番です（鍵はないので、授業の内容に合わせて どこからでも入れます）。各ステージは「せつめい → れんしゅう」。1回で正解した数で ★1〜3が つきます。まちがえても ×は出ず、ヒントが出ます。'),
-      h('p', null, h('b', null, '授業（大型テレビ）：'), 'この画面の4つの一斉モードを使います。フラッシュカード・リズム打ち・聞いてどれ・楽譜を見て歌う／ふく。'),
+      h('p', null, h('b', null, '子ども：'), '9つ目の「うたの図書館」では、共通教材の曲の楽譜を学年ごとに読みます。島の地図から 好きな島を えらびます。光っている島・ステージが おすすめの順番です（鍵はないので、授業の内容に合わせて どこからでも入れます）。各ステージは「せつめい → れんしゅう」。1回で正解した数で ★1〜3が つきます。まちがえても ×は出ず、ヒントが出ます。'),
+      h('p', null, h('b', null, '授業（大型テレビ）：'), 'この画面の4つの一斉モードを使います。フラッシュカード・リズム打ち・聞いてどれ・楽譜を見て歌う／ふく。「楽譜を見て歌う／ふく」では、学習指導要領の歌唱共通教材（著作権の切れた曲）を学年ごとに大きく映せます（旋律だけ・歌詞なし）。入っていない曲：1年「うみ」（作曲者の著作権の保護期間中）、2年「かくれんぼ」・6年「越天楽今様」（旋律を書き起こせる資料が見つからず、じゅんび中）。楽譜は著作権の切れた資料から書き起こしたもので、教科書と細かいリズムがちがう所があるかもしれません。'),
       h('p', null, h('b', null, '全画面：'), '開いて 最初に画面を さわると 全画面になります。右上の □ でも 切りかえられます。iPad・iPhone は Safari の共有ボタン →「ホーム画面に追加」で、全画面のアプリとして使えます。'),
       h('p', null, h('b', null, 'マイク：'), 'リコーダー・歌の ステージで使えます。教室が にぎやかだと 聞きとれないことがあります。そのときは「ふけた！」ボタンで進めます。上の せっていで 使わない ことも できます。'),
       h('p', null, h('b', null, '音が出ないとき：'), 'iPad・iPhone の 消音スイッチ（マナーモード）を 切ってください。'),
