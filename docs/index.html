@@ -2930,15 +2930,16 @@ const Q_TYPES = {
   seqNames(q, box, c) {
     const sb = h('div', { class: 'stage' }); box.appendChild(sb);
     const sv = h('div', { class: 'vf' }); sb.appendChild(sv);
-    const api = drawStaff(sv, { notes: q.notes, names: 'blank', time: q.time || null, pickup: q.pickup, compound: q.time === '6/8', scale: 1.8, fit: true, noteW: 58 });
+    const api = drawStaff(sv, { notes: q.notes, names: 'blank', time: q.time || null, pickup: q.pickup, compound: q.time === '6/8', scale: q.time ? 1.5 : 1.8, fit: true, noteW: q.time ? 50 : 58, minScale: q.time ? 1.05 : undefined, narrowNoteW: 44, narrowMinScale: 0.9 });
     let idx = 0;
     const skipR = () => { while (q.notes[idx] && (q.notes[idx].s == null || (idx > 0 && q.notes[idx - 1].tie))) idx++; }; // 休符と タイのつづきは とばす
     skipR();
     api.hl(idx);
-    const g = h('div', { class: 'choices', style: { gridTemplateColumns: 'repeat(auto-fit,minmax(min(110px,28vw),1fr))' } });
+    // 階名ボタンは 画面の下に くっつけて、楽譜と はなれないようにする
+    const g = h('div', { class: 'choices kb-stick', style: { gridTemplateColumns: window.innerWidth < 640 ? `repeat(${q.pool.length >= 7 ? 4 : 3},1fr)` : q.pool.length >= 7 ? 'repeat(auto-fit,minmax(min(84px,22vw),1fr))' : 'repeat(auto-fit,minmax(min(110px,28vw),1fr))', gap: window.innerWidth < 640 ? '8px' : undefined, padding: '10px 8px', borderRadius: '18px', boxShadow: '0 -6px 18px rgba(31,45,69,.08)', marginTop: '10px' } });
     const btns = [];
     q.pool.forEach(s => {
-      const b = h('button', { class: 'ch', style: { fontSize: jname(s).length > 3 ? '1em' : '1.3em', minHeight: '68px' } }, jname(s));
+      const b = h('button', { class: 'ch', style: { fontSize: jname(s).length > 2 ? (window.innerWidth < 640 ? '.85em' : '1em') : '1.3em', minHeight: window.innerWidth < 640 ? '54px' : '68px', whiteSpace: 'nowrap', padding: '0 2px' } }, jname(s));
       b.addEventListener('click', () => {
         if (c.isDone()) return;
         const want = q.notes[idx].s;
