@@ -2393,7 +2393,7 @@ function kyStage(g) {
 }
 const KY_GRADES = [1, 2, 3, 4, 5, 6].filter(g => KYOTSU.some(s => s.grade === g));
 if (KY_GRADES.length) ISLANDS.push({
-  id: 'i9', name: 'うたの図書館', sub: `教科書の 共通教材 ${KYOTSU.length}曲の 楽譜を 読もう`, color: '#b45309', grade: '1〜6年',
+  id: 'i9', name: 'うたの図書館', sub: `教科書の 共通教材から ${KYOTSU.length}曲の 楽譜を 読もう`, color: '#b45309', grade: '1〜6年',
   stages: KY_GRADES.map(kyStage)
 });
 
