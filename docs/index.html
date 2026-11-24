@@ -587,6 +587,23 @@ img.sil{filter:brightness(0) opacity(.22)}
 .eqgrp{display:flex;align-items:center;gap:4px}
 .eqbox .vf{overflow:visible}
 .eqbox .vf svg{max-width:none;width:100%;height:auto;max-height:none}
+@media (min-width:700px){.eqbox .vf{zoom:1.55}.eqcap{font-size:1.05em}}
+/* 説明カード：絵は 画面の高さに 合わせて おさめる・ボタンは 下に くっつける */
+.learn-visual .vf.one svg{max-height:30vh;width:auto!important;max-width:100%}
+.learn-visual .rec svg{max-height:38vh}
+.learn-visual ~ .kb,.stage > .kb{height:clamp(110px,21vh,220px)}
+.lfoot{position:sticky;bottom:0;z-index:6;display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 0 4px;margin-top:6px}
+.lfoot .foot{padding:6px 0 2px}
+.lfoot .skipb{min-height:38px}
+@media (max-height:700px){.lfoot .btn{min-height:50px}.lfoot .btn.big{min-height:58px;font-size:1.1em}}
+.lfoot{background:rgba(255,255,255,.78);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:24px 24px 0 0;margin-left:-8px;margin-right:-8px}
+/* 高さの低い画面（タブレット横むき・Chromebook）：リズムと リコーダーを 小さめに */
+.rec svg{max-height:44vh}
+@media (max-height:860px){
+  .rhstage .vf svg{max-height:24vh;width:auto!important;max-width:100%}
+  .drum{width:min(220px,56vw,30vh)}
+  .count{font-size:2.2em}
+}
 
 </style>
 </head>
@@ -983,7 +1000,10 @@ function renderStaff(target, o) {
   let rows = [measures.map((_, i) => i)];
   if (o.fit && measures.length > 1) {
     const cw = target.clientWidth || (target.parentNode && target.parentNode.clientWidth) || o.fitW || Math.min(700, (typeof window !== 'undefined' ? window.innerWidth - 60 : 700)); // まだ画面に のっていない時は 画面のはばで
-    const rowMax = Math.max(260, cw / ((narrow && o.narrowMinScale) || o.minScale || 1.45));
+    // 横長で 高さの低い画面（タブレットの横むき など）は、1段に 多く ならべて 段の数を へらす（画面に おさめる）
+    const shortWide = typeof window !== 'undefined' && window.innerHeight < 860 && window.innerWidth > window.innerHeight * 1.2;
+    const baseMin = (narrow && o.narrowMinScale) || o.minScale || 1.45;
+    const rowMax = Math.max(260, cw / (shortWide ? Math.min(baseMin, 1.05) : baseMin));
     rows = []; let cur = [], w = 0;
     measures.forEach((_, mi) => {
       const mw = widths[mi] + (cur.length === 0 && mi > 0 ? CLEFW : 0);
@@ -1126,7 +1146,10 @@ function symbolSvg(kind) {
 /* ===== けんばん ===== */
 function makeKeyboard(o) {
   // o = {from:-3, to:9, labels:true, onPress(midi), sound:true}
-  const from = o.from != null ? o.from : -3, to = o.to != null ? o.to : 9;
+  let from = o.from != null ? o.from : -4, to = o.to != null ? o.to : 9;
+  // 黒いけんばんの 2つ組・3つ組を とちゅうで 切らない：はじめは ド か ファ、おわりは ミ か シ に そろえる
+  while (mod7(from) !== 0 && mod7(from) !== 3) from--;
+  while (mod7(to) !== 2 && mod7(to) !== 6) to++;
   const el = h('div', { class: 'kb' });
   const whites = [];
   for (let s = from; s <= to; s++) whites.push(s);
@@ -1137,7 +1160,7 @@ function makeKeyboard(o) {
     // 名前は「低い」「高い」を 小さく 上に つける（ドレミが 2回 ならんで 見分けられない、を ふせぐ）
     const base = jname(s).replace('低い', '').replace('高い', '');
     const pre = s < 0 ? '低い' : s >= 7 ? '高い' : '';
-    const k = h('div', { class: 'w', style: { left: (i * ww) + '%', width: ww + '%' }, html: o.labels ? `<span class="kl">${pre ? `<small>${pre}</small>` : ''}<b>${base}</b></span>` : '' });
+    const k = h('div', { class: 'w', style: { left: (i * ww) + '%', width: ww + '%' }, html: o.labels && s >= -3 && s <= 9 ? `<span class="kl">${pre ? `<small>${pre}</small>` : ''}<b>${base}</b></span>` : '' });
     if (o.labels && (s < 0 || s >= 7)) k.style.color = s < 0 ? '#3a7bd5' : '#c2410c';
     k.dataset.m = m; keys[m] = k; el.appendChild(k);
     const pc = mod7(s);
@@ -1501,7 +1524,7 @@ function eqVisual(parts, caps) {
     let op = null;
     parts.forEach((p, i) => {
       if (typeof p === 'string') { op = p.trim() ? h('div', { class: 'eqop' }, p) : null; return; }
-      const box = h('div', { class: 'eqbox' }); const sv = h('div', { class: 'vf', style: { width: (44 + 40 * p.length) + 'px' } }); box.appendChild(sv);
+      const box = h('div', { class: 'eqbox' }); const sv = h('div', { class: 'vf', style: { width: (56 + 48 * p.length) + 'px' } }); box.appendChild(sv);
       if (caps && caps[i]) box.appendChild(h('div', { class: 'eqcap' }, caps[i]));
       row.appendChild(op ? h('div', { class: 'eqgrp' }, op, box) : box); op = null;
       setTimeout(() => drawStaff(sv, { notes: p.map(d => typeof d === 'string' ? N(4, d) : d), clef: false, scale: 2, end: false, noteW: 40, fit: false }), 0);
@@ -2058,7 +2081,7 @@ const ISLANDS = [
         learn: [
           { text: '楽譜の たての線を <b>小節線</b>、小節線で 区切った 1つ分を <b>小節</b> というよ。曲の おわりは <b>終止線</b>（太い線）。', staff: { notes: [N(4), N(4), N(4), N(4), N(4, 'h'), N(4, 'h')], clef: false, time: '4/4' } },
           { text: '<b>4分の4拍子</b>：1小節に 4分音符が <b>4こ分</b>。下の4が「4分音符」、上の4が「4こ」。', staff: { notes: [N(4), N(4), N(4, 'h')], clef: false, time: '4/4' }, play: 'rhythm' },
-          { text: '1小節の 中の 拍を たしてみよう。4分音符（1）＋ 4分音符（1）＋ 2分音符（2）＝ <b>4拍</b>。4分の4拍子に ぴったり！', visual: eqVisual([['q'], '＋', ['q'], '＋', ['h'], '＝', [N(4, 'q'), N(4, 'q'), N(4, 'h')]], ['1拍', '', '1拍', '', '2拍', '', '4拍']) },
+          { text: '1小節の 中の 拍を たしてみよう。4分音符（1）＋ 4分音符（1）＋ 2分音符（2）＝ <b>4拍</b>。4分の4拍子に ぴったり！', visual: eqVisual([[N(4, 'q'), N(4, 'q'), N(4, 'h')]], ['1拍 ＋ 1拍 ＋ 2拍 ＝ 4拍']) },
           { text: '<b>4分の2拍子</b>：1小節に 4分音符が <b>2こ分</b>。', staff: { notes: [N(4), N(4), N(4, 'h'), N(4), R('q')], clef: false, time: '2/4' }, play: 'rhythm' }
         ],
         gen: i => [() => barSumQ(3), () => rightBarQ(3, 4), () => rightBarQ(2, 2)][i % 3]()
@@ -2197,7 +2220,7 @@ const ISLANDS = [
         learn: [
           { text: '思い出そう。<b>2分音符＝2拍</b>、<b>4分音符＝1拍</b>、<b>8分音符＝半拍</b>（2つで1拍）。', visual: eqVisual([['h'], ['q'], ['8']], ['2拍', '1拍', '半拍']) },
           { text: '音符の右に <b>点</b>が つくと「その音符の <b>半分の長さを たす</b>」。点の ついた音符を <b>付点音符</b> というよ。', visual: eqVisual([['h'], '→', ['hd']], ['2分音符', '', '付点2分音符']) },
-          { text: '<b>付点2分音符</b>：2分音符（2拍）＋ その半分（1拍）＝ <b>3拍</b>。「ターアア」。', visual: eqVisual([['hd'], '＝', ['h'], '＋', ['q']], ['3拍', '', '2拍', '', '1拍']), staff: { notes: [N(4, 'hd'), N(4)], clef: false, time: '4/4' }, play: 'rhythm' },
+          { text: '<b>付点2分音符</b>：2分音符（2拍）＋ その半分（1拍）＝ <b>3拍</b>。「ターアア」。', visual: eqVisual([['hd'], '＝', ['h'], '＋', ['q']], ['3拍', '', '2拍', '', '1拍']), play: () => Audio2.playSeq([N(4, 'hd'), N(4)], { tempo: 84, rhythmOnly: true, metro: true, beatsPerBar: 4 }) , know: ['音符:hd'] },
           { text: '<b>付点4分音符</b>：4分音符（1拍）＋ その半分（半拍）＝ <b>1拍半</b>。', visual: eqVisual([['qd'], '＝', ['q'], '＋', ['8']], ['1拍半', '', '1拍', '', '半拍']) },
           { text: '付点4分音符（1拍半）の あとに 8分音符（半拍）で ちょうど 2拍。「<b>ターンタ</b>」と 読むよ。', staff: { notes: [N(4, 'qd'), N(4, '8'), N(4, 'qd'), N(4, '8')], clef: false, time: '4/4' }, play: 'rhythm' },
         ],
@@ -3029,7 +3052,7 @@ function stageScreen(st) {
       const vis = h('div', { class: 'stage', style: { marginTop: '16px' } });
       let api = null;
       const vbox = h('div', { class: 'learn-visual' });
-      if (c.staff) { const sbox = h('div', { class: 'vf', style: { flex: c.rec ? '1 1 150px' : '1 1 300px' } }); vbox.appendChild(sbox); api = drawStaff(sbox, Object.assign({ scale: c.staff.notes.length <= 2 ? 2.8 : 2.1, fit: true }, c.staff)); }
+      if (c.staff) { const sbox = h('div', { class: 'vf', style: { flex: c.rec ? '1 1 150px' : '1 1 300px' } }); vbox.appendChild(sbox); api = drawStaff(sbox, Object.assign({ scale: c.staff.notes.length <= 2 ? 2.8 : 2.1, fit: true }, c.staff)); if (c.staff.notes.length <= 10) sbox.classList.add('one'); }
       if (c.rec) vbox.appendChild(h('div', { class: 'rec', style: { width: 'min(170px,40vw)' } }, svgEl(recorderSvg(c.rec.p || fingering(c.rec.s), { nums: true, hl: c.rec.hl, label: c.rec.s != null ? jname(c.rec.s, null, 'rec') : '' }))));
       if (c.syms) c.syms.forEach(k => { const d = DYN.concat(HAIR).find(x => x.k === k); vbox.appendChild(h('div', { class: 'center', style: { width: 'min(170px,40vw)' } }, svgEl(symbolSvg(k)), h('div', { style: { fontWeight: 700, fontSize: '.85em' } }, d.yomi), h('div', { class: 'em', style: { fontSize: '.85em' } }, d.imi))); });
       if (c.visual) c.visual(vbox);
@@ -3044,12 +3067,15 @@ function stageScreen(st) {
         else if (typeof c.play === 'function') c.play();
       };
       const last = ci === st.learn.length - 1;
-      wrap.appendChild(h('div', { class: 'foot' },
-        ci > 0 ? h('button', { class: 'btn ghost', onclick: tap(() => { ci--; showCard(); }) }, 'もどる') : null,
-        c.play ? h('button', { class: 'btn teal', onclick: tap(doPlay) }, svgEl(ICON.ear), 'きく') : null,
-        h('button', { class: 'btn glow ' + (last ? 'big' : ''), onclick: tap(() => { if (last) practice(st, scr, body); else { ci++; showCard(); } }) }, last ? 'れんしゅう スタート' : 'つぎへ')));
-      wrap.appendChild(h('div', { class: 'center', style: { marginTop: '6px' } }, h('button', { class: 'btn ghost small', onclick: tap(() => practice(st, scr, body)) }, 'せつめいを とばす')));
+      // ボタンは 画面の下に くっつけて、いつでも 押せるように（スクロールで 見えなくならない）
+      wrap.appendChild(h('div', { class: 'lfoot' },
+        h('div', { class: 'foot' },
+          ci > 0 ? h('button', { class: 'btn ghost', onclick: tap(() => { ci--; showCard(); }) }, 'もどる') : null,
+          c.play ? h('button', { class: 'btn teal', onclick: tap(doPlay) }, svgEl(ICON.ear), 'きく') : null,
+          h('button', { class: 'btn glow ' + (last ? 'big' : ''), onclick: tap(() => { if (last) practice(st, scr, body); else { ci++; showCard(); } }) }, last ? 'れんしゅう スタート' : 'つぎへ')),
+        h('button', { class: 'btn ghost small skipb', onclick: tap(() => practice(st, scr, body)) }, 'せつめいを とばす')));
       scr.querySelectorAll('.foot svg').forEach(s => { s.style.width = '26px'; s.style.height = '26px'; });
+      if (!(c.staff && c.staff.notes.length > 16)) fitWrap(body, wrap); else { wrap.__fitTok = null; wrap.style.zoom = ''; window.__fit = null; }
       if (c.play) Audio2.after(450, doPlay);
     };
     showCard();
@@ -3084,6 +3110,7 @@ function practice(st, scr, body) {
     do { q = st.gen(state.i); guard++; } while (guard < 6 && recent.includes(qKey(q)));
     recent.push(qKey(q)); if (recent.length > 3) recent.shift();
     q.__combo = state.combo;
+    setTimeout(() => fitWrap(body, wrap), 0);
     runQuestion(q, area, (firstTry) => {
       const d = dots.children[state.i];
       d.classList.remove('now'); d.classList.add(firstTry ? 'ok' : 'mid');
@@ -3145,6 +3172,7 @@ function practice(st, scr, body) {
         nextIn ? h('button', { class: 'btn glow', onclick: tap(() => stageScreen(nextIn)) }, 'つぎの ステージへ')
           : h('button', { class: 'btn glow', onclick: tap(homeScreen) }, '島の地図へ')),
       st.daily ? null : h('button', { class: 'btn ghost small', style: { marginTop: '6px' }, onclick: tap(() => islandScreen(isl)) }, isl.name + 'へ もどる')));
+    fitWrap(body, wrap);
     // けいけん値を ふやしていく動き
     const total = xpRes.after - xpRes.before; let k = 0;
     const step = () => {
@@ -3211,7 +3239,7 @@ function runQuestion(q, area, done) {
     Audio2.chime(false);
     if (!hintShown && q.hint) {
       hintShown = true;
-      hintArea.appendChild(h('div', { class: 'hintbox' }, svgEl(guideSvg('think')), h('div', { html: 'ヒント：' + q.hint })));
+      hintArea.appendChild(h('div', { class: 'hintbox' }, svgEl(guideSvg('think')), h('div', { html: 'ヒント：' + q.hint }))); if (window.__fit) window.__fit();
     }
     if (extra) extra(tries);
   };
@@ -3388,7 +3416,7 @@ const Q_TYPES = {
     box.appendChild(g);
   },
   rhythm(q, box, c) {
-    const sb = h('div', { class: 'stage' }); box.appendChild(sb);
+    const sb = h('div', { class: 'stage rhstage' }); box.appendChild(sb);
     const sv = h('div', { class: 'vf' }); sb.appendChild(sv);
     const api = drawStaff(sv, { notes: q.pattern, time: q.time, clef: false, scale: 1.8, fit: true, narrowNoteW: 22, narrowMinScale: 0.9 });
     const count = h('div', { class: 'count' });
@@ -3464,7 +3492,7 @@ const Q_TYPES = {
 };
 
 /* せまい画面では、要らない低い けんばんを はぶいて 1つずつを 大きくする */
-function kbFrom(minStep) { return (window.innerWidth < 640 && minStep != null && minStep >= 0) ? 0 : -3; }
+function kbFrom(minStep) { return (minStep != null && minStep >= 0) ? 0 : -4; } // 低い音が いらなければ ドから
 
 /* 今の音符が見える所まで そっと動かす（いちばん上へは もどさない ★16） */
 function seeNote(api, i) {
@@ -3482,7 +3510,7 @@ function blowCommon(q, box, c, notes) {
   const row = h('div', { class: 'learn-visual' }); sb.appendChild(row);
   const sv = h('div', { class: 'vf', style: { flex: seq ? '1 1 300px' : '1 1 150px' } }); row.appendChild(sv);
   const api = drawStaff(sv, { narrowNoteW: 34, narrowMinScale: 0.8, notes, time: seq ? (q.time || '4/4') : null, pickup: q.pickup, compound: q.time === '6/8', names: seq ? false : true, scale: seq ? 1.6 : 2.2, ctx: q.kind === 'rec' ? 'rec' : null, fit: true });
-  const recBox = q.kind === 'rec' ? h('div', { class: 'rec', style: { width: 'min(150px,34vw)' } }) : null;
+  const recBox = q.kind === 'rec' ? h('div', { class: 'rec', style: { width: seq ? 'min(100px,19vw)' : 'min(150px,34vw)', flex: '0 0 auto' } }) : null;
   if (recBox) row.appendChild(recBox);
   let idx = 0, hold = 0;
   const skip = () => { while (notes[idx] && (notes[idx].s == null || (idx > 0 && notes[idx - 1].tie))) idx++; };
@@ -4301,6 +4329,25 @@ function cameoCheer(cam, ok, combo) {
   bub.textContent = ok ? (combo >= 5 ? combo + 'れんぞく！' : CHEER[combo % CHEER.length]) : 'だいじょうぶ！';
   cam.classList.remove('yay', 'oops'); void cam.offsetWidth; cam.classList.add(ok ? 'yay' : 'oops');
 }
+
+/* ===== 画面に ぜんぶ おさめる（2026-11-24 カワイさん「画面に全部おさまってないと操作しにくい」）=====
+   説明カードと 問題の画面は、スクロールしなくても 全部が 見えるように、中身を 少しずつ 小さくする（0.55倍まで）。
+   それでも 入らないときだけ スクロールが 残る。画面の向きや 大きさが かわったら やり直す。 */
+function fitWrap(body, wrap) {
+  const tok = {}; wrap.__fitTok = tok; // 前の カードの 予約は 使わない
+  const run = () => {
+    if (!document.body.contains(wrap) || wrap.__fitTok !== tok) return;
+    wrap.style.zoom = '';
+    const avail = body.clientHeight;
+    if (body.scrollHeight <= avail + 1) return;
+    let z = Math.max(0.55, avail / body.scrollHeight);
+    wrap.style.zoom = z;
+    for (let k = 0; k < 3 && body.scrollHeight > avail + 1 && z > 0.55; k++) { z = Math.max(0.55, z * (avail / body.scrollHeight) - 0.01); wrap.style.zoom = z; }
+  };
+  run(); requestAnimationFrame(run); setTimeout(run, 300); setTimeout(run, 1000);
+  window.__fit = run;
+}
+window.addEventListener('resize', () => { if (window.__fit) window.__fit(); });
 
 /* ===== 先生の画面 ===== */
 async function teacherLogin() {
