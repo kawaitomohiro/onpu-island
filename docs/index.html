@@ -596,7 +596,7 @@ img.sil{filter:brightness(0) opacity(.22)}
 .lfoot .foot{padding:6px 0 2px}
 .lfoot .skipb{min-height:38px}
 @media (max-height:700px){.lfoot .btn{min-height:50px}.lfoot .btn.big{min-height:58px;font-size:1.1em}}
-.lfoot{background:rgba(255,255,255,.78);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:24px 24px 0 0;margin-left:-8px;margin-right:-8px}
+.ovf .lfoot{background:rgba(255,255,255,.82);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:24px 24px 0 0;margin-left:-8px;margin-right:-8px;box-shadow:0 -6px 16px rgba(31,45,69,.08)}
 /* 高さの低い画面（タブレット横むき・Chromebook）：リズムと リコーダーを 小さめに */
 .rec svg{max-height:44vh}
 @media (max-height:860px){
@@ -3075,6 +3075,8 @@ function stageScreen(st) {
           h('button', { class: 'btn glow ' + (last ? 'big' : ''), onclick: tap(() => { if (last) practice(st, scr, body); else { ci++; showCard(); } }) }, last ? 'れんしゅう スタート' : 'つぎへ')),
         h('button', { class: 'btn ghost small skipb', onclick: tap(() => practice(st, scr, body)) }, 'せつめいを とばす')));
       scr.querySelectorAll('.foot svg').forEach(s => { s.style.width = '26px'; s.style.height = '26px'; });
+      const ovf = () => body.classList.toggle('ovf', body.scrollHeight > body.clientHeight + 2); // 下に 中身が かくれているときだけ ボタンの 下地を つける
+      setTimeout(ovf, 60); setTimeout(ovf, 1100);
       if (!(c.staff && c.staff.notes.length > 16)) fitWrap(body, wrap); else { wrap.__fitTok = null; wrap.style.zoom = ''; window.__fit = null; }
       if (c.play) Audio2.after(450, doPlay);
     };
@@ -3469,6 +3471,7 @@ const Q_TYPES = {
     startB.addEventListener('click', tap(start));
     const judge = () => {
       running = false; drum.classList.add('off'); api.hl(-1);
+      if (window.__test) window.__rj = { taps: taps.slice(), expect: expect.map(e => e.b) };
       const used = new Array(taps.length).fill(false);
       let hitN = 0;
       expect.forEach(ex => {
