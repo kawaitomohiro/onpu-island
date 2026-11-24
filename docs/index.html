@@ -604,6 +604,8 @@ img.sil{filter:brightness(0) opacity(.22)}
   .drum{width:min(220px,56vw,30vh)}
   .count{font-size:2.2em}
 }
+/* わかち書きの文は、ことばの とちゅうで 折り返さない（「1拍／半」「ラ／ー」を ふせぐ） */
+.say .bubble,.fcard small,.fcard b,.ncard small,.hero-bubble,.quest small,.nfcard small,.ib-sub,.stg .t small,.prompt,.hintbox{word-break:keep-all;overflow-wrap:anywhere;line-break:strict}
 
 </style>
 </head>
@@ -937,7 +939,7 @@ function makeVfNote(nt, clef) {
   const dots = nt.d.endsWith('d') ? 1 : 0;
   const base = nt.d.replace('d', '');
   const n = new F.StaveNote({
-    keys: [isRest ? (nt.restKey || (clef === 'bass' ? 'd/3' : 'b/4')) : vfKey(nt.s, nt.acc)], clef: clef || 'treble',
+    keys: [isRest ? (nt.restKey || (base === 'w' ? (clef === 'bass' ? 'f/3' : 'd/5') : (clef === 'bass' ? 'd/3' : 'b/4'))) : vfKey(nt.s, nt.acc)], clef: clef || 'treble',
     duration: base + (isRest ? 'r' : ''), dots, auto_stem: !isRest
   });
   if (dots) F.Dot.buildAndAttach([n], { all: true });
@@ -1861,7 +1863,7 @@ function takkaQ() {
   ];
   const opts = shuffle([pats[0]].concat(shuffle(pats.slice(1)).slice(0, 2)));
   return {
-    type: 'choice', prompt: '「<span class="em">タッカ・タッカ</span>」の リズムは どれ？', wide: true,
+    type: 'choice', prompt: '「<span class="em">タッカ・タッカ</span>」の リズムは どれ？', wide: true, oneCol: true,
     choices: opts.map(o => ({ staff: { notes: o.notes, clef: false, scale: 1.4, end: false, minMW: 160 }, ok: !!o.ok })),
     hint: 'タッカは 点のついた音符（長い）のあとに、はしごが2だんの 16分音符（短い）。'
   };
@@ -1953,7 +1955,7 @@ function earRhythmQ(level) {
   let guard = 0;
   while (opts.length < 3 && guard++ < 120) { const b = genRhythm(level || 2, 1, 4); if (!opts.some(x => onsets(x) === onsets(b))) opts.push(b); }
   return {
-    type: 'choice', prompt: '聞こえたリズムは どれ？', play: () => Audio2.playSeq(good, { tempo: 84, rhythmOnly: true, countIn: 4 }), autoPlay: true,
+    type: 'choice', prompt: '聞こえたリズムは どれ？', play: () => Audio2.playSeq(good, { tempo: 84, rhythmOnly: true, countIn: 4 }), autoPlay: true, oneCol: true,
     choices: shuffle(opts.map((o, i) => ({ staff: { notes: o, clef: false, time: null, scale: 1.2, end: false }, ok: i === 0 }))), wide: true,
     hint: 'はじめの4回は「1・2・3・4」の合図。そのあとを 聞いてね。'
   };
@@ -2018,7 +2020,7 @@ const ISLANDS = [
           { text: '<b>ド</b>は 五線の下。みじかい線（<b>加線</b>）をひいて、その<b>まん中</b>にのるよ。', staff: { notes: [N(0, 'w')], names: true, minMW: 120 }, play: () => Audio2.note(60, 1) },
           { text: '<b>レ</b>は 五線の いちばん下の線の <b>すぐ下</b>（線に ぶらさがる形）。', staff: { notes: [N(1, 'w')], names: true, minMW: 120 }, play: () => Audio2.note(62, 1) },
           { text: '<b>ミ</b>は いちばん下の線の <b>上</b>（線がまん中を通る）。', staff: { notes: [N(2, 'w')], names: true, minMW: 120 }, play: () => Audio2.note(64, 1) },
-          { text: 'ならべて 聞いてみよう。<b>ド・レ・ミ</b>！ 上にいくほど 高い音。', staff: { notes: [N(0), N(1), N(2), N(1), N(0, 'w')], names: true }, play: 'seq' }
+          { text: 'ならべて 聞いてみよう。<b>ド・レ・ミ・レ・ド</b>！ 上にいくほど 高い音。', staff: { notes: [N(0), N(1), N(2), N(1), N(0, 'w')], names: true }, play: 'seq' }
         ],
         gen: i => i % 3 === 2 ? tapQ([0, 1, 2]) : noteNameQ([0, 1, 2])
       },
@@ -2257,7 +2259,7 @@ const ISLANDS = [
         id: '5-5b', title: '16分音符', sub: 'タカタカ（1拍に4つ）', n: 9,
         learn: [
           { text: '思い出そう。<b>8分音符</b>は 半拍、2つで 1拍「タタ」。', staff: { notes: [N(4, '8'), N(4, '8'), N(4, '8'), N(4, '8'), N(4, 'h')], clef: false, time: '4/4' }, play: 'rhythm' },
-          { text: '<b>16分音符</b>は はしごが <b>2だん</b>。1つで <b>4分の1拍</b>、<b>4つで 1拍</b>。「<b>タカタカ</b>」。', visual: eqVisual([[N(4, '16'), N(4, '16'), N(4, '16'), N(4, '16')], '＝', ['q']], ['4つで 1拍', '', '1拍']), staff: { notes: [N(4, '16'), N(4, '16'), N(4, '16'), N(4, '16'), N(4), N(4, 'h')], clef: false, time: '4/4' }, play: 'rhythm' },
+          { text: '<b>16分音符</b>は はしごが <b>2だん</b>。1つで <b>4分の1拍</b>、<b>4つで 1拍</b>。「<b>タカタカ</b>」。', visual: eqVisual([[N(4, '16'), N(4, '16'), N(4, '16'), N(4, '16')], '＝', ['q']], ['4つで 1拍', '', '1拍']), play: () => Audio2.playSeq([N(4, '16'), N(4, '16'), N(4, '16'), N(4, '16'), N(4), N(4, 'h')], { tempo: 84, rhythmOnly: true, metro: true, beatsPerBar: 4 }), know: ['音符:16'] },
           { text: '16分音符 2つと 8分音符で「<b>タカタ</b>」、8分音符と 16分音符 2つで「<b>タタカ</b>」。どちらも ちょうど <b>1拍</b>。', staff: { notes: [N(4, '16'), N(4, '16'), N(4, '8'), N(4, '8'), N(4, '16'), N(4, '16'), N(4, 'h')], clef: false, time: '4/4' }, play: 'rhythm' }
         ],
         gen: i => [() => symbolQ(['16', '8', 'q', 'qd'], 'beats'), () => symbolQ(['16', '8', 'q', '8r']), () => rhythmQ(7, 1, 4, 66)][i % 3]()
@@ -2283,7 +2285,7 @@ const ISLANDS = [
         id: '5-8', title: '8分の6拍子', sub: '5・6年の 先どり', n: 9, extra: true,
         learn: [
           { text: '<b>8分の6拍子</b>：1小節に <b>8分音符が 6こ分</b>。下の8が「8分音符」、上の6が「6こ」。', staff: { notes: [N(4, '8'), N(4, '8'), N(4, '8'), N(4, '8'), N(4, '8'), N(4, '8'), N(4, 'q'), N(4, '8'), N(4, 'qd')], clef: false, time: '6/8' }, play: 'rhythm' },
-          { text: '<b>3こずつ 2つの まとまり</b>で 感じるよ。「<b>1</b>・2・3・<b>4</b>・5・6」と、1と4を 強く。ゆれる 船のような リズム！', staff: { notes: [N(4, 'q'), N(4, '8'), N(4, 'q'), N(4, '8'), N(4, 'qd'), N(4, 'qd')], clef: false, time: '6/8' }, play: 'rhythm' },
+          { text: '<b>3こずつ 2つの まとまり</b>で 感じるよ。「<b>1</b>・2・3・<b>4</b>・5・6」と、1と4を 強く（＞の 印）。ゆれる 船のような リズム！', staff: { notes: [N(4, 'q', { art: '>' }), N(4, '8'), N(4, 'q', { art: '>' }), N(4, '8'), N(4, 'qd', { art: '>' }), N(4, 'qd', { art: '>' })], clef: false, time: '6/8' }, play: 'rhythm' },
           { text: '数えかた：<b>8分音符＝1こ</b>、<b>4分音符＝2こ</b>、<b>付点4分音符＝3こ</b>。', staff: { notes: [N(4, '8'), N(4, 'q'), N(4, 'qd')], clef: false, time: '6/8', end: false }, play: 'rhythm' }
         ],
         gen: i => [sixMeaningQ, sixCountQ, sixBarQ, sixRhythmQ][i % 4]()
@@ -3282,6 +3284,13 @@ const Q_TYPES = {
       btns.push(b); g.appendChild(b);
     });
     box.appendChild(g);
+    // 楽譜の選択肢は、みんな 同じ 大きさの 楽譜に そろえる（短い楽譜だけ 大きく 見えて 答えの ヒントに ならないように）
+    const svs = [...g.querySelectorAll('.ch.svg .vf svg')];
+    if (svs.length > 1) {
+      const vw = sv => { const v = sv.viewBox && sv.viewBox.baseVal; return v && v.width ? v.width : parseFloat(sv.getAttribute('width')) || 0; };
+      const mx = Math.max(...svs.map(vw));
+      if (mx > 0) svs.forEach(sv => { sv.style.width = (vw(sv) / mx * 100) + '%'; sv.style.height = 'auto'; sv.style.maxHeight = 'none'; });
+    }
   },
   staffTap(q, box, c) {
     // さわった所に音符がおかれる → 動かして えらぶ → 「これで けってい」
@@ -3513,7 +3522,7 @@ function blowCommon(q, box, c, notes) {
   const row = h('div', { class: 'learn-visual' }); sb.appendChild(row);
   const sv = h('div', { class: 'vf', style: { flex: seq ? '1 1 300px' : '1 1 150px' } }); row.appendChild(sv);
   const api = drawStaff(sv, { narrowNoteW: 34, narrowMinScale: 0.8, notes, time: seq ? (q.time || '4/4') : null, pickup: q.pickup, compound: q.time === '6/8', names: seq ? false : true, scale: seq ? 1.6 : 2.2, ctx: q.kind === 'rec' ? 'rec' : null, fit: true });
-  const recBox = q.kind === 'rec' ? h('div', { class: 'rec', style: { width: seq ? 'min(100px,19vw)' : 'min(150px,34vw)', flex: '0 0 auto' } }) : null;
+  const recBox = q.kind === 'rec' ? h('div', { class: 'rec', style: { width: seq ? 'min(92px,17vw)' : 'min(150px,34vw)', flex: '0 0 auto' } }) : null;
   if (recBox) row.appendChild(recBox);
   let idx = 0, hold = 0;
   const skip = () => { while (notes[idx] && (notes[idx].s == null || (idx > 0 && notes[idx - 1].tie))) idx++; };
