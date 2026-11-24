@@ -185,6 +185,8 @@ input{font-family:var(--fb);font-size:inherit}
 .kb .w{position:absolute;top:0;bottom:0;background:linear-gradient(180deg,#fff 0%,#fff 82%,#eef2f8 100%);border:2px solid #9aa8bd;border-radius:0 0 12px 12px;
   display:flex;align-items:flex-end;justify-content:center;padding-bottom:8px;font-family:var(--fj);font-weight:900;font-size:clamp(13px,1.7vw,20px);color:#5a6a85;transition:background .1s}
 .kb .b{position:absolute;top:0;height:60%;background:linear-gradient(180deg,#3a4458,#1b2233);border-radius:0 0 8px 8px;z-index:2;box-shadow:0 3px 0 #0c1019;transition:background .1s}
+.kb .w{white-space:nowrap;overflow:hidden}
+@media (max-width:640px){.kb .w{font-size:.62em;letter-spacing:-.06em}}
 .kb .w.down{background:linear-gradient(180deg,#ffe9a8,#ffd25c)}
 .kb .b.down{background:linear-gradient(180deg,#ffcf4a,#e0a000)}
 .kb .w.okk{background:linear-gradient(180deg,#b9f3d2,#5fd99a)}
@@ -245,7 +247,7 @@ input{font-family:var(--fb);font-size:inherit}
 .seg button{padding:.35em 1em;border-radius:999px;font-size:.9em;min-height:44px}
 .seg button.on{background:#fff;box-shadow:0 2px 0 #cfd8e6;color:var(--grape-d)}
 .big-screen{background:#fff;border-radius:30px;box-shadow:var(--shadow);padding:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:min(44vh,460px)}
-.chips{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 10px;-webkit-overflow-scrolling:touch}
+.chips{display:flex;flex-wrap:wrap;gap:8px;padding:4px 2px 10px}
 .chips .btn{flex:0 0 auto;white-space:nowrap}
 .flash-name{font-family:var(--fj);font-weight:900;font-size:clamp(60px,12vw,160px);color:var(--coral);line-height:1.1;min-height:1.2em}
 .xshare{display:block;margin:26px auto 4px;color:#8a97ab;font-size:.8em;padding:.4em 1em;border-radius:999px;background:#f1f4fa}
@@ -664,6 +666,19 @@ function makeVfNote(nt, clef) {
   return n;
 }
 
+/* 階名を書く。「高いド」「低いソ」は、上に小さく「高い」「低い」、下に大きく「ド」（横に長くならず となりと重ならない） */
+function putName(t, label, size) {
+  const NS = 'http://www.w3.org/2000/svg';
+  while (t.firstChild) t.removeChild(t.firstChild);
+  const m = /^(高い|低い)(.+)$/.exec(label);
+  t.setAttribute('font-size', size);
+  if (!m) { t.textContent = label; return; }
+  const x = t.getAttribute('x');
+  const a = document.createElementNS(NS, 'tspan'); a.setAttribute('x', x); a.setAttribute('dy', -size * 0.95); a.setAttribute('font-size', Math.round(size * 0.52)); a.textContent = m[1];
+  const b = document.createElementNS(NS, 'tspan'); b.setAttribute('x', x); b.setAttribute('dy', size * 0.95); b.textContent = m[2];
+  t.appendChild(a); t.appendChild(b);
+}
+
 /*
   楽譜をかく。o = {notes:[{s,d,acc,tie,art}], time:'4/4', clef:true, names:true, scale:1.8,
                    repeatStart, repeatEnd, volta:{mi:'1.'}, slurs:[[a,b]], labels:{mi:'①'}, noteW, minMW}
@@ -679,7 +694,11 @@ function renderStaff(target, o) {
     let cur = [], acc = 0, capNow = o.pickup > 0 ? o.pickup : cap; // 弱起（アウフタクト）は さいしょの小節だけ みじかい
     notes.forEach((nt, i) => { cur.push(i); acc += BEATS[nt.d]; if (acc >= capNow - 1e-6) { measures.push(cur); cur = []; acc = 0; capNow = cap; } });
     if (cur.length) measures.push(cur);
-  } else measures = [notes.map((_, i) => i)];
+  } else {
+    // 小節線のない 長い ならびは、せまい画面では 7こずつ 段に分ける
+    const per = o.chunk || ((typeof window !== 'undefined' && window.innerWidth < 640 && notes.length > 7 && o.names) ? Math.ceil(notes.length / Math.ceil(notes.length / 7)) : notes.length || 1);
+    for (let i = 0; i < notes.length; i += per) measures.push(notes.slice(i, i + per).map((_, j) => i + j));
+  }
   if (!measures.length) measures = [[]];
   const top = o.top != null ? o.top : (o.volta || o.labels ? 46 : 30);
   const narrow = typeof window !== 'undefined' && window.innerWidth < 640;
@@ -707,8 +726,8 @@ function renderStaff(target, o) {
   }
   const rowW = rows.map(r => r.reduce((a, mi, k) => a + widths[mi] + (k === 0 && mi > 0 ? CLEFW : 0), 0));
   const total = Math.max(...rowW) + 22;
-  const rowH = (o.names ? 150 : 118) - (rows.length > 1 ? 12 : 0);
-  const height = top + rowH * rows.length + (o.extraBottom || 0) + (rows.length > 1 ? 12 : 0);
+  const rowH = (o.names ? 150 : 118) + ((o.labels || o.volta) && rows.length > 1 ? 34 : 0) - (rows.length > 1 ? 12 : 0);
+  const height = top + rowH * rows.length + (o.extraBottom || 0) + (o.sub ? 34 : 0) + (rows.length > 1 ? 12 : 0);
   const div = document.createElement('div');
   target.appendChild(div);
   const ren = new F.Renderer(div, F.Renderer.Backends.SVG);
@@ -785,16 +804,16 @@ function renderStaff(target, o) {
       t.setAttribute('text-anchor', 'middle');
       t.setAttribute('font-family', 'Zen Maru Gothic, BIZ UDPGothic, sans-serif');
       t.setAttribute('font-weight', '900');
-      t.setAttribute('font-size', jname(nt.s, nt.acc, o.ctx).length > 2 ? 14 : 21);
       t.setAttribute('fill', '#1f2d45');
-      t.textContent = o.names === 'blank' ? '' : jname(nt.s, nt.acc, o.ctx);
+      if (o.names === 'blank') { t.setAttribute('font-size', 21); t.textContent = ''; } else putName(t, jname(nt.s, nt.acc, o.ctx), 21);
       svg.appendChild(t); nameEls.push(t);
     });
   }
   if (o.labels) Object.keys(o.labels).forEach(mi => {
     const st = staves[mi]; if (!st) return;
     const t = document.createElementNS(NS, 'text');
-    t.setAttribute('x', st.getX() + st.getWidth() / 2 + (Number(mi) === 0 ? extra / 2 : 0)); t.setAttribute('y', 26);
+    // 折り返しても その小節の まうえに（音符の始まりから 小節の終わりまでの まん中）
+    t.setAttribute('x', (st.getNoteStartX() + st.getX() + st.getWidth()) / 2); t.setAttribute('y', st.getYForLine(0) - (o.volta && o.volta[mi] ? 44 : 22));
     t.setAttribute('text-anchor', 'middle'); t.setAttribute('font-size', 26); t.setAttribute('font-weight', '900');
     t.setAttribute('font-family', 'Zen Maru Gothic, sans-serif'); t.setAttribute('fill', '#7b5cff');
     t.textContent = o.labels[mi]; svg.appendChild(t);
@@ -1455,7 +1474,7 @@ function repeatQ() {
   const notes = [N(0), N(2), N(4), N(2), N(3), N(1), N(2, 'h'), N(4), N(5), N(4), N(2), N(3), N(1), N(0, 'h')];
   const opts = shuffle([r.ans].concat(shuffle(ALL_ORDERS.filter(x => x !== r.ans)).slice(0, 2)));
   return {
-    type: 'choice', prompt: 'えんそうする じゅんばんは？', staff: Object.assign({ notes, time: '4/4', scale: 1.6, noteW: 34, minMW: 80, labels: { 0: '①', 1: '②', 2: '③', 3: '④' } }, r.o),
+    type: 'choice', prompt: 'えんそうする じゅんばんは？', staff: Object.assign({ notes, time: '4/4', scale: 1.6, noteW: 34, minMW: 80, narrowNoteW: 26, narrowMinScale: 0.85, labels: { 0: '①', 1: '②', 2: '③', 3: '④' } }, r.o),
     choices: opts.map(x => ({ label: x, ok: x === r.ans })), wide: true, small: true, hint: r.text + '。'
   };
 }
@@ -1501,8 +1520,8 @@ function tempoQ() {
     type: 'choice', prompt: '速いのは どっち？（聞いて たしかめても いいよ）',
     visual: el => {
       el.appendChild(h('div', { class: 'row c', style: { gap: '22px' } },
-        h('button', { class: 'btn ghost', onclick: tap(() => Audio2.playSeq(mel, { tempo: L })) }, svgEl(ICON.ear), `A　♩＝${L}`),
-        h('button', { class: 'btn ghost', onclick: tap(() => Audio2.playSeq(mel, { tempo: Rr })) }, svgEl(ICON.ear), `B　♩＝${Rr}`)));
+        h('button', { class: 'btn ghost', style: { whiteSpace: 'nowrap' }, onclick: tap(() => Audio2.playSeq(mel, { tempo: L })) }, svgEl(ICON.ear), `A　♩＝${L}`),
+        h('button', { class: 'btn ghost', style: { whiteSpace: 'nowrap' }, onclick: tap(() => Audio2.playSeq(mel, { tempo: Rr })) }, svgEl(ICON.ear), `B　♩＝${Rr}`)));
     },
     choices: [{ label: `A（♩＝${L}）`, ok: L > Rr }, { label: `B（♩＝${Rr}）`, ok: Rr > L }],
     hint: '♩＝120 は、1分間に 4分音符を120回 打つ速さ。数が大きいほど 速いよ。'
@@ -1728,7 +1747,7 @@ const ISLANDS = [
         id: '2-3', title: '全音符と 全休符', sub: '4拍の なが〜い音', n: 9,
         learn: [
           { text: '<b>全音符</b>は 4拍。白い たまごだけ。「<b>ターアアア</b>」。', staff: { notes: [N(4, 'w')], clef: false, time: '4/4' }, play: 'rhythm' },
-          { text: '<b>全休符</b>は 4拍 休む。<b>上から2本目の線に ぶらさがる</b> 形。2分休符は のる、全休符は ぶらさがる！', staff: { notes: [R('w')], clef: false, time: '4/4' } }
+          { text: '<b>全休符</b>は 4拍 休む。<b>上から2本目の線に ぶらさがる</b> 形。<br>左の <b>2分休符</b>は まん中の線に のる、右の <b>全休符</b>は ぶらさがる！', staff: { notes: [R('h'), R('h'), R('w')], clef: false, time: '4/4', labels: { 0: '2分休符', 1: '全休符' }, minMW: 130 } }
         ],
         gen: i => [() => symbolQ(['q', 'h', 'w', 'qr', 'hr', 'wr']), () => symbolQ(['q', 'h', 'w', 'qr', 'hr', 'wr'], 'beats'), () => rhythmQ(3, 1)][i % 3]()
       },
@@ -1816,7 +1835,7 @@ const ISLANDS = [
       {
         id: '4-4', title: 'ファ・ミ・レ・低いド', sub: '右手も つかうよ', n: 10,
         learn: [
-          { text: '<b>ミ</b>：うら・1〜5。<b>低いレ</b>：うら・1〜6。<b>低いド</b>：ぜんぶ ふさぐ。息は もっと やさしく。', rec: { s: 0 }, staff: { notes: [N(2), N(1), N(0, 'h')], names: true, ctx: 'rec' }, play: () => Audio2.playSeq([N(2), N(1), N(0, 'h')], { kind: 'rec' }) },
+          { text: '<b>ミ</b>：うら・1〜5。<b>低いレ</b>：うら・1〜6。<b>低いド</b>：ぜんぶ ふさぐ。息は もっと やさしく。', visual: el => el.appendChild(h('div', { class: 'row c', style: { gap: '6px', flexWrap: 'nowrap', flex: '1 1 300px' } }, ...[2, 1, 0].map(s => h('div', { class: 'rec', style: { width: 'min(112px,28vw)' } }, svgEl(recorderSvg(fingering(s), { nums: true, label: jname(s, null, 'rec') })))))), staff: { notes: [N(2), N(1), N(0, 'h')], names: true, ctx: 'rec' }, play: () => Audio2.playSeq([N(2), N(1), N(0, 'h')], { kind: 'rec' }) },
           { text: '<b>ファ</b>は リコーダーの しゅるいで ちがうよ。この端末は <b>[REC]式</b>。先生の画面で かえられるよ。', rec: { s: 3 }, staff: { notes: [N(3, 'w')], names: true, minMW: 110 }, play: () => Audio2.note(65, 1.2, 'rec') }
         ],
         gen: i => [() => fingerChoiceQ([0, 1, 2, 3, 4]), () => fingerNameQ([0, 1, 2, 3, 4]), () => blowQ(pick([0, 1, 2, 3]))][i % 3]()
@@ -1921,8 +1940,8 @@ const ISLANDS = [
       {
         id: '6-2', title: 'くり返しの 記号', sub: 'リピート・1番かっこ・2番かっこ', n: 8,
         learn: [
-          { text: '<b>|: と :|</b> の間を <b>もう一回</b>。:| だけなら はじめから もう一回。', staff: { notes: [N(0), N(2), N(4), N(2), N(3), N(1), N(2, 'h'), N(4), N(5), N(4), N(2), N(3), N(1), N(0, 'h')], time: '4/4', scale: 1.6, noteW: 34, minMW: 80, labels: { 0: '①', 1: '②', 2: '③', 3: '④' }, repeatStart: 2, repeatEnd: 3 }, extra: 'じゅんばん：①②③④<b>③④</b>' },
-          { text: '<b>1番かっこ・2番かっこ</b>：2回目は 1番かっこを とばして 2番かっこへ。', staff: { notes: [N(0), N(2), N(4), N(2), N(3), N(1), N(2, 'h'), N(4), N(5), N(4), N(2), N(3), N(1), N(0, 'h')], time: '4/4', scale: 1.6, noteW: 34, minMW: 80, labels: { 0: '①', 1: '②', 2: '③', 3: '④' }, repeatEnd: 2, volta: { 2: '1.', 3: '2.' } }, extra: 'じゅんばん：①②③<b>①②④</b>' }
+          { text: '<b>くり返し記号</b>：<b>|:</b>（はじまり）から <b>:|</b>（おわり）までを、<b>もう一回</b> えんそうするよ。<br>この楽譜は ①②③④ と進んで、③④ を もう一回。<br><small>:| だけで |: が ないときは、さいしょに もどって もう一回。</small>', staff: { notes: [N(0), N(2), N(4), N(2), N(3), N(1), N(2, 'h'), N(4), N(5), N(4), N(2), N(3), N(1), N(0, 'h')], time: '4/4', scale: 1.6, noteW: 34, minMW: 80, narrowNoteW: 26, narrowMinScale: 0.85, labels: { 0: '①', 1: '②', 2: '③', 3: '④' }, repeatStart: 2, repeatEnd: 3 }, extra: 'じゅんばん：①②③④<b>③④</b>' },
+          { text: '<b>1番かっこ・2番かっこ</b>：1回目は ①②③（1番かっこ）まで進んで、:| で さいしょに もどる。<br>2回目は ①② のあと、1番かっこの ③ を とばして 2番かっこの ④ へ。', staff: { notes: [N(0), N(2), N(4), N(2), N(3), N(1), N(2, 'h'), N(4), N(5), N(4), N(2), N(3), N(1), N(0, 'h')], time: '4/4', scale: 1.6, noteW: 34, minMW: 80, narrowNoteW: 26, narrowMinScale: 0.85, labels: { 0: '①', 1: '②', 2: '③', 3: '④' }, repeatEnd: 2, volta: { 2: '1.', 3: '2.' } }, extra: 'じゅんばん：①②③<b>①②④</b>' }
         ],
         gen: () => repeatQ()
       },
@@ -2282,7 +2301,7 @@ function kyPickupAt(song, idx) {
   return cap - pos;
 }
 function kyStaff(song, notes, pickup, extra) {
-  return Object.assign({ notes, time: song.time, pickup: pickup || 0, compound: song.time === '6/8', tempo: kyTempo(song) }, extra || {});
+  return Object.assign({ notes, time: song.time, pickup: pickup || 0, compound: song.time === '6/8', tempo: kyTempo(song), narrowNoteW: 32, narrowMinScale: 0.72 }, extra || {});
 }
 const kyHasAcc = ns => ns.some(n => n.acc);
 const kyPitchKey = ns => ns.filter(n => n.s != null).map(n => n.s + (n.acc || '')).join(',');
@@ -2380,7 +2399,7 @@ function kyStage(g) {
     id: '9-' + g, title: `${KY_GRADE_NAME(g)}の 共通教材`, sub: list.map(s => s.title).join('・'), n: Math.max(8, list.length * 3),
     learn: list.map((song, i) => ({
       text: `${i === 0 ? `${KY_GRADE_NAME(g)}で みんなが 歌う曲（共通教材）の 楽譜だよ。${KY_MISSING[g] ? `<br><small>${KY_MISSING[g]}</small>` : ''}<br>` : ''}<b>「${song.title}」</b>　${song.origin}・${song.time === '6/8' ? '8分の6拍子' : `4分の${song.time[0]}拍子`}。おてほんに 合わせて、階名を 読んでみよう。`,
-      staff: kyStaff(song, song.notes, song.pickup, { names: true, scale: 1.5, fit: true, minScale: 1.0, noteW: 60, narrowNoteW: 46, narrowMinScale: 0.85 }), play: 'seq'
+      staff: kyStaff(song, song.notes, song.pickup, { names: true, scale: 1.5, fit: true, minScale: 1.0, noteW: 60, narrowNoteW: 46, narrowMinScale: 0.78 }), play: 'seq'
     })),
     gen: i => {
       // 曲と 問題の種類が かたよらないように、曲は順番に・種類は ずらしながら回す
@@ -2419,7 +2438,8 @@ function drawStaff(el, o) {
     const w0 = api.total + 26;
     api.svg.setAttribute('viewBox', `0 0 ${w0} ${api.height}`);
     api.svg.style.maxWidth = (w0 * (o.scale || 1.8)) + 'px';
-    for (let k = 1; k <= 5; k++) txt(xr, st.getYForLine(5 - k) + 5, k, 14, '#7b5cff');
+    // 線の間は10しかないので、番号は 小さめにして 左右に ずらして ならべる（重ならないように）
+    for (let k = 1; k <= 5; k++) txt(xr + (k % 2 ? 0 : 14), st.getYForLine(5 - k) + 4, k, 11, '#7b5cff');
   }
   if (o.sub) o.sub.forEach((s, i) => txt(api.nx[i], api.yOf(-3) + 18, s, 14, '#c2410c', 'middle'));
   return api;
@@ -2606,7 +2626,7 @@ function stageScreen(st) {
       const vis = h('div', { class: 'stage', style: { marginTop: '16px' } });
       let api = null;
       const vbox = h('div', { class: 'learn-visual' });
-      if (c.staff) { const sbox = h('div', { class: 'vf', style: { flex: '1 1 300px' } }); vbox.appendChild(sbox); api = drawStaff(sbox, Object.assign({ scale: c.staff.notes.length <= 2 ? 2.8 : 2.1, fit: true }, c.staff)); }
+      if (c.staff) { const sbox = h('div', { class: 'vf', style: { flex: c.rec ? '1 1 150px' : '1 1 300px' } }); vbox.appendChild(sbox); api = drawStaff(sbox, Object.assign({ scale: c.staff.notes.length <= 2 ? 2.8 : 2.1, fit: true }, c.staff)); }
       if (c.rec) vbox.appendChild(h('div', { class: 'rec', style: { width: 'min(170px,40vw)' } }, svgEl(recorderSvg(c.rec.p || fingering(c.rec.s), { nums: true, hl: c.rec.hl, label: c.rec.s != null ? jname(c.rec.s, null, 'rec') : '' }))));
       if (c.syms) c.syms.forEach(k => { const d = DYN.concat(HAIR).find(x => x.k === k); vbox.appendChild(h('div', { class: 'center', style: { width: 'min(170px,40vw)' } }, svgEl(symbolSvg(k)), h('div', { style: { fontWeight: 700, fontSize: '.85em' } }, d.yomi), h('div', { class: 'em', style: { fontSize: '.85em' } }, d.imi))); });
       if (c.visual) c.visual(vbox);
@@ -2790,7 +2810,7 @@ function runQuestion(q, area, done) {
   let stageBox = null, api = null;
   if (q.staff || q.visual) {
     stageBox = h('div', { class: 'stage' });
-    if (q.staff) { const sb = h('div', { class: 'vf' }); stageBox.appendChild(sb); api = drawStaff(sb, q.staff); }
+    if (q.staff) { const sb = h('div', { class: 'vf' }); stageBox.appendChild(sb); api = drawStaff(sb, Object.assign({ fit: true }, q.staff)); }
     if (q.visual) q.visual(stageBox);
     box.appendChild(stageBox);
   }
@@ -2902,7 +2922,7 @@ const Q_TYPES = {
     const sb = c.stageBox || h('div', { class: 'stage' });
     if (!c.stageBox) box.appendChild(sb);
     const sv = h('div', { class: 'vf' }); sb.insertBefore(sv, sb.firstChild);
-    const api = drawStaff(sv, { notes: q.notes, time: q.time === false ? null : (q.time || '4/4'), pickup: q.pickup, compound: q.time === '6/8', scale: 1.6, names: false, fit: true });
+    const api = drawStaff(sv, { narrowNoteW: 34, narrowMinScale: 0.8, notes: q.notes, time: q.time === false ? null : (q.time || '4/4'), pickup: q.pickup, compound: q.time === '6/8', scale: 1.6, names: false, fit: true });
     let idx = 0, miss = 0, missHere = 0;
     const skip = () => { while (q.notes[idx] && (q.notes[idx].s == null || (idx > 0 && q.notes[idx - 1].tie))) idx++; }; // 休符と タイのつづきは とばす
     const mark = () => { api.groups.forEach((g, k) => { if (!g) return; g.classList.toggle('vf-hl', k === idx); g.classList.toggle('vf-ok', k < idx); }); seeNote(api, idx); };
@@ -2930,7 +2950,7 @@ const Q_TYPES = {
   seqNames(q, box, c) {
     const sb = h('div', { class: 'stage' }); box.appendChild(sb);
     const sv = h('div', { class: 'vf' }); sb.appendChild(sv);
-    const api = drawStaff(sv, { notes: q.notes, names: 'blank', time: q.time || null, pickup: q.pickup, compound: q.time === '6/8', scale: q.time ? 1.5 : 1.8, fit: true, noteW: q.time ? 50 : 58, minScale: q.time ? 1.05 : undefined, narrowNoteW: 44, narrowMinScale: 0.9 });
+    const api = drawStaff(sv, { notes: q.notes, names: 'blank', time: q.time || null, pickup: q.pickup, compound: q.time === '6/8', scale: q.time ? 1.5 : 1.8, fit: true, noteW: q.time ? 50 : 58, minScale: q.time ? 1.05 : undefined, narrowNoteW: 34, narrowMinScale: 0.78 });
     let idx = 0;
     const skipR = () => { while (q.notes[idx] && (q.notes[idx].s == null || (idx > 0 && q.notes[idx - 1].tie))) idx++; }; // 休符と タイのつづきは とばす
     skipR();
@@ -2945,7 +2965,7 @@ const Q_TYPES = {
         const want = q.notes[idx].s;
         if (s === want) {
           Audio2.note(midiOf(s), 0.5);
-          if (api.nameEls[idx]) { api.nameEls[idx].textContent = jname(s); api.nameEls[idx].setAttribute('fill', '#11894d'); api.nameEls[idx].setAttribute('font-size', jname(s).length > 2 ? 13 : 19); }
+          if (api.nameEls[idx]) { putName(api.nameEls[idx], jname(s), 19); api.nameEls[idx].setAttribute('fill', '#11894d'); }
           api.groups[idx] && api.groups[idx].classList.add('vf-ok');
           btns.forEach(x => x.classList.remove('hintme'));
           idx++; skipR();
@@ -3052,8 +3072,8 @@ function blowCommon(q, box, c, notes) {
   const seq = notes.length > 1;
   const sb = h('div', { class: 'stage' }); box.appendChild(sb);
   const row = h('div', { class: 'learn-visual' }); sb.appendChild(row);
-  const sv = h('div', { class: 'vf', style: { flex: '1 1 300px' } }); row.appendChild(sv);
-  const api = drawStaff(sv, { notes, time: seq ? (q.time || '4/4') : null, pickup: q.pickup, compound: q.time === '6/8', names: seq ? false : true, scale: seq ? 1.6 : 2.2, ctx: q.kind === 'rec' ? 'rec' : null, fit: true });
+  const sv = h('div', { class: 'vf', style: { flex: seq ? '1 1 300px' : '1 1 150px' } }); row.appendChild(sv);
+  const api = drawStaff(sv, { narrowNoteW: 34, narrowMinScale: 0.8, notes, time: seq ? (q.time || '4/4') : null, pickup: q.pickup, compound: q.time === '6/8', names: seq ? false : true, scale: seq ? 1.6 : 2.2, ctx: q.kind === 'rec' ? 'rec' : null, fit: true });
   const recBox = q.kind === 'rec' ? h('div', { class: 'rec', style: { width: 'min(150px,34vw)' } }) : null;
   if (recBox) row.appendChild(recBox);
   let idx = 0, hold = 0;
