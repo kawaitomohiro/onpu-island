@@ -571,6 +571,22 @@ img.sil{filter:brightness(0) opacity(.22)}
 .hole.c{fill:#3a2a1c;stroke:#2a1d12}
 .hole.h{fill:url(#halfFill)}
 @media (max-width:520px){.inisl .stage{border-width:2px;padding:8px 4px;outline-width:2px;outline-offset:-6px}}
+/* けんばんの 名前（低い・高いを 小さく上に） */
+.kb .w .kl{display:flex;flex-direction:column;align-items:center;line-height:1.05}
+.kb .w .kl small{font-size:.62em;font-weight:700;opacity:.9}
+.kb .w .kl b{font-weight:900}
+@media (max-width:640px){.kb .w{font-size:.72em;letter-spacing:-.04em}.kb .w .kl small{font-size:.7em}}
+/* 長さの式 */
+.eqrow{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:4px 6px;width:100%}
+.eqbox{display:flex;flex-direction:column;align-items:center;min-width:64px}
+.eqbox .vf svg{max-height:110px;width:auto}
+.eqop{font-family:var(--fj);font-weight:900;font-size:1.6em;color:var(--coral)}
+.eqcap{font-family:var(--fj);font-weight:900;font-size:.9em;color:#c2410c;background:#fff3e6;border-radius:99px;padding:0 .7em}
+.eqbox .vf svg{max-height:130px;height:auto;width:100%}
+@media (max-width:640px){.kb .w{font-size:clamp(10px,3.2vw,16px);letter-spacing:-.05em}}
+.eqgrp{display:flex;align-items:center;gap:4px}
+.eqbox .vf{overflow:visible}
+.eqbox .vf svg{max-width:none;width:100%;height:auto;max-height:none}
 
 </style>
 </head>
@@ -890,8 +906,6 @@ function jname(s, acc, ctx) {
   let base = JA[mod7(s)];
   if (acc === '#') base += '♯'; if (acc === 'b') base += '♭';
   if (ctx === 'bass') return base; // ヘ音記号の楽譜は 低い・高いを つけずに 読む
-  if (ctx === 'rec' && s === 0) return '低いド';
-  if (ctx === 'rec' && s === 1) return '低いレ';
   if (s < 0) return '低い' + base;
   if (s >= 7) return '高い' + base;
   return base;
@@ -1120,7 +1134,10 @@ function makeKeyboard(o) {
   const keys = {};
   whites.forEach((s, i) => {
     const m = midiOf(s);
-    const k = h('div', { class: 'w', style: { left: (i * ww) + '%', width: ww + '%' } }, o.labels ? jname(s).replace('低い', '').replace('高い', '') : '');
+    // 名前は「低い」「高い」を 小さく 上に つける（ドレミが 2回 ならんで 見分けられない、を ふせぐ）
+    const base = jname(s).replace('低い', '').replace('高い', '');
+    const pre = s < 0 ? '低い' : s >= 7 ? '高い' : '';
+    const k = h('div', { class: 'w', style: { left: (i * ww) + '%', width: ww + '%' }, html: o.labels ? `<span class="kl">${pre ? `<small>${pre}</small>` : ''}<b>${base}</b></span>` : '' });
     if (o.labels && (s < 0 || s >= 7)) k.style.color = s < 0 ? '#3a7bd5' : '#c2410c';
     k.dataset.m = m; keys[m] = k; el.appendChild(k);
     const pc = mod7(s);
@@ -1477,6 +1494,21 @@ function freqToMidi(f) { const m = 69 + 12 * Math.log2(f / 440); const r = Math.
 /* --- 曲（著作権の切れた民謡・わらべうた・クラシックと、オリジナル） --- */
 const N = (s, d, x) => Object.assign({ s, d: d || 'q' }, x || {});
 const R = d => ({ s: null, d: d || 'q' });
+/* 長さを 式で 見せる：eqVisual([['qd'],'＝',['q'],'＋',['8']], ['1拍半','','1拍','','半拍']) */
+function eqVisual(parts, caps) {
+  return el => {
+    const row = h('div', { class: 'eqrow' });
+    let op = null;
+    parts.forEach((p, i) => {
+      if (typeof p === 'string') { op = p.trim() ? h('div', { class: 'eqop' }, p) : null; return; }
+      const box = h('div', { class: 'eqbox' }); const sv = h('div', { class: 'vf', style: { width: (44 + 40 * p.length) + 'px' } }); box.appendChild(sv);
+      if (caps && caps[i]) box.appendChild(h('div', { class: 'eqcap' }, caps[i]));
+      row.appendChild(op ? h('div', { class: 'eqgrp' }, op, box) : box); op = null;
+      setTimeout(() => drawStaff(sv, { notes: p.map(d => typeof d === 'string' ? N(4, d) : d), clef: false, scale: 2, end: false, noteW: 40, fit: false }), 0);
+    });
+    el.appendChild(row);
+  };
+}
 const MELODIES = [
   { id: 'kira', title: 'きらきら星', notes: [N(0), N(0), N(4), N(4), N(5), N(5), N(4, 'h'), N(3), N(3), N(2), N(2), N(1), N(1), N(0, 'h')] },
   { id: 'kaeru', title: 'かえるのうた', notes: [N(0), N(1), N(2), N(3), N(2), N(1), N(0, 'h'), N(2), N(3), N(4), N(5), N(4), N(3), N(2, 'h')] },
@@ -1489,10 +1521,10 @@ const MELODIES = [
   { id: 'takai', title: 'てっぺんのうた（オリジナル）', notes: [N(4), N(6), N(7), N(8), N(9, 'h'), N(7, 'h'), N(8), N(7), N(6), N(5), N(4, 'w')] }
 ];
 const REC_MELODIES = [
-  { title: 'シ・ラ・ソ（イギリス民謡）', notes: [N(6), N(5), N(4, 'h'), N(6), N(5), N(4, 'h'), N(4, '8'), N(4, '8'), N(4, '8'), N(4, '8'), N(5, '8'), N(5, '8'), N(5, '8'), N(5, '8'), N(6), N(5), N(4, 'h')] },
+  { title: 'シ・ラ・ソの うた（オリジナル）', notes: [N(6), N(5), N(4, 'h'), N(4), N(5), N(6, 'h'), N(6), N(5), N(4), N(5), N(6, 'h'), N(5, 'h'), N(4, 'w')] },
   { title: 'あさのかね（オリジナル）', notes: [N(6), N(6), N(5, 'h'), N(4), N(5), N(6, 'h'), N(7), N(6), N(5), N(6), N(4, 'w')] },
   { title: 'たかいレまで（オリジナル）', notes: [N(4), N(5), N(6), N(7), N(8, 'h'), N(7, 'h'), N(6), N(7), N(5), N(6), N(4, 'w')] },
-  { title: 'ひくいドまで（オリジナル）', notes: [N(4), N(3), N(2), N(1), N(0, 'h'), N(2, 'h'), N(4), N(3), N(1), N(2), N(0, 'w')] }
+  { title: 'ドまで おりよう（オリジナル）', notes: [N(4), N(3), N(2), N(1), N(0, 'h'), N(2, 'h'), N(4), N(3), N(1), N(2), N(0, 'w')] }
 ];
 
 /* --- 音符・休符の名前 --- */
@@ -1642,8 +1674,8 @@ function barSumQ(level, per) {
   const total = sumBeats(pat);
   const opts = [...new Set([total, total - 1, total + 1, total + 2].filter(x => x > 0))].slice(0, 4).sort((a, b) => a - b);
   return {
-    type: 'choice', prompt: 'この小節は ぜんぶで 何拍？', staff: { notes: pat, clef: false, scale: 1.8, end: false },
-    choices: opts.map(x => ({ label: x + '拍', ok: x === total })), hint: '1つずつ 拍をたしてみよう。4分音符＝1、2分音符＝2、全音符＝4、8分音符＝半分。'
+    type: 'choice', prompt: '音符と 休符の 拍を ぜんぶ たすと 何拍？', staff: { notes: pat, clef: false, scale: 1.8, end: false, noBars: true },
+    choices: opts.map(x => ({ label: (x % 1 ? (Math.floor(x) ? Math.floor(x) + '拍半' : '半拍') : x + '拍'), ok: x === total })), hint: '1つずつ 拍をたしてみよう。4分音符＝1、2分音符＝2、全音符＝4、8分音符＝半分。'
   };
 }
 function rightBarQ(level, per) {
@@ -1666,7 +1698,7 @@ function rightBarQ(level, per) {
 function keyQ(s, o) {
   o = o || {};
   return {
-    type: 'key', prompt: o.prompt || `この音を けんばんで ひこう`, staff: o.noStaff ? null : { notes: [N(s, 'w', { acc: o.acc })], scale: 2.2 },
+    type: 'key', prompt: o.prompt || `楽譜と 同じ高さの けんばんを ひこう`, staff: o.noStaff ? null : { notes: [N(s, 'w', { acc: o.acc })], scale: 2.2 },
     answer: midiOf(s, o.acc), minStep: o.pcOnly ? 0 : s, pcOnly: !!o.pcOnly, labels: !!o.labels, hint: o.hint || lineHint(s)
   };
 }
@@ -1746,10 +1778,17 @@ const ARTS = [
   { k: 'tie', name: 'タイ', imi: '同じ高さの音を つないで1つに', notes: [N(4, 'h', { tie: true }), N(4, 'q'), N(2)], hl: [0, 1] },
   { k: 'breath', name: 'ブレス', imi: 'ここで 息を すって', notes: [N(2), N(3), N(4, 'h', { breath: true }), N(4), N(3), N(2, 'h')], hl: [2] }
 ];
-function artQ() {
-  const a = pick(ARTS);
+function artTieQ() {
+  const a = pick(['h', 'q']), b = pick(['q', '8', 'h']);
+  const ok = Math.random() < .5;
+  return ok ? { type: 'choice', prompt: 'タイで つながった 2つの音は どう ならす？', staff: { notes: [N(4, a, { tie: true }), N(4, b)], scale: 2 }, choices: shuffle([{ label: '1回だけ ならして のばす', ok: true }, { label: '2回 ならす' }]), wide: true, hint: 'タイは 2つで 1つの ながい音。' }
+    : { type: 'choice', prompt: 'タイで つなげるのは どんな音？', staff: { notes: [N(4, a, { tie: true }), N(4, b)], scale: 2 }, choices: shuffle([{ label: '同じ高さの音', ok: true }, { label: 'ちがう高さの音' }]), wide: true, hint: 'タイは 同じ高さの音を つなぐ線。' };
+}
+function artQ(list) {
+  list = list || ARTS;
+  const a = pick(list);
   const t = Math.random() < .5;
-  const opts = shuffle([a].concat(shuffle(ARTS.filter(x => x !== a)).slice(0, 3)));
+  const opts = shuffle([a].concat(shuffle(list.filter(x => x !== a)).slice(0, 3)));
   return {
     type: 'choice', prompt: t ? 'この記号の 名前は？' : 'この記号の いみは？', staff: { notes: a.notes, slurs: a.slurs, scale: 1.8 },
     choices: opts.map(x => ({ label: t ? x.name : x.imi, ok: x === a })), wide: true,
@@ -1769,7 +1808,8 @@ function accQ() {
   const sym = pick(['#', 'b', 'n']);
   const imi = { '#': '半音 上げる', 'b': '半音 下げる', 'n': 'もとの高さに もどす' };
   const nm = { '#': 'シャープ', 'b': 'フラット', 'n': 'ナチュラル' };
-  return { type: 'choice', prompt: `<span class="em">${nm[sym]}</span> の いみは？`, staff: { notes: [N(3, 'w', { acc: sym })], scale: 2 }, choices: shuffle(Object.keys(imi)).map(k => ({ label: imi[k], ok: k === sym })), wide: true, hint: `${nm[sym]}は「${imi[sym]}」。` };
+  const symS = { '#': 3, 'b': 6, 'n': 6 }[sym];
+  return { type: 'choice', prompt: `<span class="em">${nm[sym]}</span> の いみは？`, staff: { notes: [N(symS, 'w', { acc: sym })], scale: 2 }, choices: shuffle(Object.keys(imi)).map(k => ({ label: imi[k], ok: k === sym })), wide: true, hint: `${nm[sym]}は「${imi[sym]}」。` };
 }
 function tempoQ() {
   const a = pick([60, 72, 80, 88]), b = pick([108, 120, 132, 144]);
@@ -1838,7 +1878,7 @@ function sixCountQ() {
   const total = Math.round(sumBeats(pat) * 2);
   const opts = [...new Set([total, total - 1, total + 1, total + 2].filter(x => x > 0))].slice(0, 4).sort((a, b) => a - b);
   return {
-    type: 'choice', prompt: 'この小節は 8分音符 何こ分？', staff: { notes: pat, clef: false, scale: 1.8, end: false, compound: true },
+    type: 'choice', prompt: 'ぜんぶ たすと 8分音符 何こ分？', staff: { notes: pat, clef: false, scale: 1.8, end: false, compound: true, noBars: true },
     choices: opts.map(x => ({ label: x + 'こ分', ok: x === total })), hint: '8分音符＝1こ、4分音符＝2こ、付点4分音符＝3こ。'
   };
 }
@@ -1951,8 +1991,9 @@ const ISLANDS = [
       {
         id: '1-2', title: 'ド・レ・ミ', sub: '五線の下の3つの音', n: 8,
         learn: [
+          { text: 'ド・レ・ミ・ファ・ソ・ラ・シ… の 音の よび名を <b>階名</b>（かいめい）というよ。五線の 中だけでなく、<b>五線の 外</b>にも 音を おけるよ。', staff: { notes: [N(0), N(1), N(2), N(3), N(4, 'w')], names: true }, play: 'seq' },
           { text: '<b>ド</b>は 五線の下。みじかい線（<b>加線</b>）をひいて、その<b>まん中</b>にのるよ。', staff: { notes: [N(0, 'w')], names: true, minMW: 120 }, play: () => Audio2.note(60, 1) },
-          { text: '<b>レ</b>は いちばん下の線に <b>ぶらさがる</b>。', staff: { notes: [N(1, 'w')], names: true, minMW: 120 }, play: () => Audio2.note(62, 1) },
+          { text: '<b>レ</b>は 五線の いちばん下の線の <b>すぐ下</b>（線に ぶらさがる形）。', staff: { notes: [N(1, 'w')], names: true, minMW: 120 }, play: () => Audio2.note(62, 1) },
           { text: '<b>ミ</b>は いちばん下の線の <b>上</b>（線がまん中を通る）。', staff: { notes: [N(2, 'w')], names: true, minMW: 120 }, play: () => Audio2.note(64, 1) },
           { text: 'ならべて 聞いてみよう。<b>ド・レ・ミ</b>！ 上にいくほど 高い音。', staff: { notes: [N(0), N(1), N(2), N(1), N(0, 'w')], names: true }, play: 'seq' }
         ],
@@ -1989,6 +2030,7 @@ const ISLANDS = [
       {
         id: '2-1', title: '4分音符と 4分休符', sub: 'タン と ウン', n: 8,
         learn: [
+          { text: '音楽には、同じ速さで ずっと つづく「<b>拍</b>」が あるよ。心ぞうの ドキドキや、時計の カチ・カチ と にている。聞いて、手で そっと 打ってみよう。', play: () => Audio2.playSeq([R('q'), R('q'), R('q'), R('q'), R('q'), R('q'), R('q'), R('q')], { tempo: 84, metro: true, rhythmOnly: true, beatsPerBar: 4 }) },
           { text: '<b>4分音符</b>は 1拍。「<b>タン</b>」と読むよ。', staff: { notes: [N(4), N(4), N(4), N(4)], clef: false, time: '4/4' }, play: 'rhythm' },
           { text: '<b>4分休符</b>は 1拍 <b>休む</b>。「<b>ウン</b>」。休符も 大事な リズムだよ。', staff: { notes: [N(4), N(4), R('q'), N(4)], clef: false, time: '4/4' }, play: 'rhythm' },
           { text: 'リズム打ちは、<b>おてほん</b>を聞いて、「1・2・3・4」の合図のあとに たいこを たたくよ。', staff: { notes: [N(4), R('q'), N(4), N(4)], clef: false, time: '4/4' }, play: 'rhythm' }
@@ -2014,8 +2056,9 @@ const ISLANDS = [
       {
         id: '2-4', title: '拍子と 小節', sub: '4分の4拍子・4分の2拍子', n: 9,
         learn: [
-          { text: 'たての線で 区切った1つ分を <b>小節</b> というよ。おわりは <b>終止線</b>（太い線）。', staff: { notes: [N(4), N(4), N(4), N(4), N(4, 'h'), N(4, 'h')], clef: false, time: '4/4' } },
+          { text: '楽譜の たての線を <b>小節線</b>、小節線で 区切った 1つ分を <b>小節</b> というよ。曲の おわりは <b>終止線</b>（太い線）。', staff: { notes: [N(4), N(4), N(4), N(4), N(4, 'h'), N(4, 'h')], clef: false, time: '4/4' } },
           { text: '<b>4分の4拍子</b>：1小節に 4分音符が <b>4こ分</b>。下の4が「4分音符」、上の4が「4こ」。', staff: { notes: [N(4), N(4), N(4, 'h')], clef: false, time: '4/4' }, play: 'rhythm' },
+          { text: '1小節の 中の 拍を たしてみよう。4分音符（1）＋ 4分音符（1）＋ 2分音符（2）＝ <b>4拍</b>。4分の4拍子に ぴったり！', visual: eqVisual([['q'], '＋', ['q'], '＋', ['h'], '＝', [N(4, 'q'), N(4, 'q'), N(4, 'h')]], ['1拍', '', '1拍', '', '2拍', '', '4拍']) },
           { text: '<b>4分の2拍子</b>：1小節に 4分音符が <b>2こ分</b>。', staff: { notes: [N(4), N(4), N(4, 'h'), N(4), R('q')], clef: false, time: '2/4' }, play: 'rhythm' }
         ],
         gen: i => [() => barSumQ(3), () => rightBarQ(3, 4), () => rightBarQ(2, 2)][i % 3]()
@@ -2035,7 +2078,8 @@ const ISLANDS = [
         learn: [
           { text: '黒いけんばんは <b>2つ組</b> と <b>3つ組</b> が ならんでいるよ。', kb: { labels: false, hl: [61, 63, 66, 68, 70] } },
           { text: '<b>2つ組の すぐ左</b>の白いけんばんが <b>ド</b>！ ドは どこにでも あるよ。', kb: { labels: false, hl: [60, 72] } },
-          { text: '<b>3つ組の すぐ左</b>は <b>ファ</b>。ドから じゅんに ドレミファソラシ。', kb: { labels: true, hl: [65, 77] } }
+          { text: '<b>3つ組の すぐ左</b>は <b>ファ</b>。ファも 目じるしに なるよ。', kb: { labels: false, from: 0, to: 9, hl: [65, 77] } },
+          { text: 'ドから 右へ じゅんに ド・レ・ミ・ファ・ソ・ラ・シ、そのつぎが また <b>ド</b>（高いド）。', kb: { labels: true, from: 0, to: 9, hl: [60, 72] } }
         ],
         gen: i => {
           const s = pick([0, 0, 3, 4, 2, 1, 5, 6]);
@@ -2044,13 +2088,16 @@ const ISLANDS = [
       },
       {
         id: '3-2', title: '楽譜を見て ひこう', sub: 'ド〜ソ', n: 10,
-        learn: [{ text: '楽譜の音を けんばんで ひくよ。<b>五線のドは、まん中のド</b>（けんばんの まん中あたり）。', kb: { labels: true, hl: [60] }, staff: { notes: [N(0, 'w')], names: true, minMW: 120 } }],
+        learn: [{ text: 'ここからは <b>楽譜と 同じ高さ</b>の けんばんを おすよ。<b>五線のドは、まん中のド</b>（けんばんの まん中あたり）。', kb: { labels: true, hl: [60] }, staff: { notes: [N(0, 'w')], names: true, minMW: 120 } }],
         gen: () => keyQ(pick(rangeArr(0, 4)))
       },
       {
-        id: '3-3', title: '低いソから 高いミまで', sub: 'ひろい はんいを ひこう', n: 10,
-        learn: [{ text: '<b>高いド</b>は まん中のドの 1つ右のド。<b>低いソ</b>は まん中のドの 左のほうだよ。', kb: { labels: true, hl: [55, 72, 76] }, staff: { notes: [N(-3, 'h'), N(0, 'h'), N(7, 'h'), N(9, 'h')], names: true } }],
-        gen: () => keyQ(pick(rangeArr(-3, 9)))
+        id: '3-3', title: 'ドから 高いドまで', sub: 'ラ・シ・高いドも ひこう', n: 10,
+        learn: [
+          { text: '楽譜の <b>ラ・シ</b>は、けんばんでは ソの 右へ じゅんに。', kb: { labels: true, from: 0, to: 9, hl: [69, 71] }, staff: { notes: [N(4, 'h'), N(5, 'h'), N(6, 'h')], names: true } },
+          { text: '<b>高いド</b>は、まん中のドから 白いけんばんを 8つ目。2つ組の すぐ左に また ドが あるよ。', kb: { labels: true, from: 0, to: 9, hl: [60, 72] }, staff: { notes: [N(0, 'h'), N(7, 'h')], names: true } }
+        ],
+        gen: () => keyQ(pick(rangeArr(0, 7)))
       },
       {
         id: '3-4', title: 'みじかい曲を ひこう', sub: '音符を じゅんばんに', n: 4,
@@ -2087,22 +2134,25 @@ const ISLANDS = [
       {
         id: '4-3', title: '高いド・高いレ', sub: 'おやゆびに 注意', n: 9,
         learn: [
-          { text: '<b>高いド</b>：うら と <b>2</b>（1は あける！）。', rec: { s: 7 }, staff: { notes: [N(7, 'w')], names: true, minMW: 110 }, play: () => Audio2.note(72, 1.2, 'rec') },
-          { text: '<b>高いレ</b>：<b>2だけ</b>。うらも あけるよ。', rec: { s: 8 }, staff: { notes: [N(8, 'w')], names: true, minMW: 110 }, play: () => Audio2.note(74, 1.2, 'rec') }
+          { text: '<b>高いド</b>：うら と <b>2</b>（1は あける！）。楽譜では 下から3ばん目の 間。', rec: { s: 7 }, staff: { notes: [N(7, 'w')], names: true, minMW: 110 }, play: () => Audio2.note(72, 1.2, 'rec') },
+          { text: '<b>高いレ</b>：<b>2だけ</b>。うらも あけるよ。楽譜では 上から2本目の 線。', rec: { s: 8 }, staff: { notes: [N(8, 'w')], names: true, minMW: 110 }, play: () => Audio2.note(74, 1.2, 'rec') }
         ],
         gen: i => [() => fingerChoiceQ([4, 5, 6, 7, 8]), () => fingerNameQ([4, 5, 6, 7, 8]), () => blowQ(pick([6, 7, 8]))][i % 3]()
       },
       {
-        id: '4-4', title: 'ファ・ミ・レ・低いド', sub: '右手も つかうよ', n: 10,
+        id: '4-4', title: 'ファ・ミ・レ・ド', sub: '右手も つかうよ', n: 10,
         learn: [
-          { text: '<b>ミ</b>：うら・1〜5。<b>低いレ</b>：うら・1〜6。<b>低いド</b>：ぜんぶ ふさぐ。息は もっと やさしく。', visual: el => el.appendChild(h('div', { class: 'row c', style: { gap: '6px', flexWrap: 'nowrap', flex: '1 1 300px' } }, ...[2, 1, 0].map(s => h('div', { class: 'rec', style: { width: 'min(112px,28vw)' } }, svgEl(recorderSvg(fingering(s), { nums: true, label: jname(s, null, 'rec') })))))), staff: { notes: [N(2), N(1), N(0, 'h')], names: true, ctx: 'rec' }, play: () => Audio2.playSeq([N(2), N(1), N(0, 'h')], { kind: 'rec' }) },
+          { text: 'ここからは <b>右手</b>も つかうよ。左手（うら・1・2・3）は ふさいだまま、右手の 指を 1本ずつ ふやすと、音が 1つずつ 下がる。', rec: { s: 4 } },
+          { text: '<b>ミ</b>：うら・1〜5 を ふさぐ。', rec: { s: 2 }, staff: { notes: [N(2, 'w')], names: true, minMW: 110 }, play: () => Audio2.note(64, 1.2, 'rec') },
+          { text: '<b>レ</b>：うら・1〜6 を ふさぐ。息は もっと やさしく。<br><small>リコーダーの 教科書では「低いレ」と 書くことも あるよ。この アプリでは ドレミの浜と 同じ「レ」と よぶよ。</small>', rec: { s: 1 }, staff: { notes: [N(1, 'w')], names: true, minMW: 110 }, play: () => Audio2.note(62, 1.2, 'rec') },
+          { text: '<b>ド</b>：<b>ぜんぶ</b> ふさぐ。いちばん やさしい 息で「トゥー」。<br><small>教科書の「低いド」と 同じ音だよ。</small>', rec: { s: 0 }, staff: { notes: [N(0, 'w')], names: true, minMW: 110 }, play: () => Audio2.note(60, 1.2, 'rec') },
           { text: '<b>ファ</b>は リコーダーの しゅるいで ちがうよ。この端末は <b>[REC]式</b>。先生の画面で かえられるよ。', rec: { s: 3 }, staff: { notes: [N(3, 'w')], names: true, minMW: 110 }, play: () => Audio2.note(65, 1.2, 'rec') }
         ],
         gen: i => [() => fingerChoiceQ([0, 1, 2, 3, 4]), () => fingerNameQ([0, 1, 2, 3, 4]), () => blowQ(pick([0, 1, 2, 3]))][i % 3]()
       },
       {
         id: '4-5', title: '高いミ と ぜんぶの音', sub: 'サミング（うらを半分）', n: 10,
-        learn: [{ text: '<b>高いミ</b>：うらを <b>半分だけ</b> あける（サミング）・1〜5。つめを立てて すきまを作るよ。', rec: { s: 9 }, staff: { notes: [N(9, 'w')], names: true, minMW: 110 }, play: () => Audio2.note(76, 1.2, 'rec') }],
+        learn: [{ text: '<b>高いミ</b>：うらを <b>半分だけ</b> あける（サミング）・1〜5。つめを立てて すきまを作るよ。楽譜では 上から1ばん目の 間。', rec: { s: 9 }, staff: { notes: [N(9, 'w')], names: true, minMW: 110 }, play: () => Audio2.note(76, 1.2, 'rec') }],
         gen: i => [() => fingerChoiceQ(rangeArr(0, 9)), () => noteNameQ(rangeArr(0, 9), { ctx: 'rec' }), () => fingerNameQ([0, 2, 4, 6, 7, 8, 9])][i % 3]()
       },
       {
@@ -2117,12 +2167,21 @@ const ISLANDS = [
     stages: [
       {
         id: '5-1', title: '低いソ・低いラ・低いシ', sub: '下の加線', n: 10,
-        learn: [{ text: 'ドより 下の音。<b>低いシ</b>は ドの加線に ぶらさがる。<b>低いラ</b>は 加線2本の2本目。<b>低いソ</b>は その下に ぶらさがる。', staff: { notes: [N(0), N(-1), N(-2), N(-3, 'w')], names: true }, play: 'seq' }],
+        learn: [
+          { text: 'ドより 下にも 音が あるよ。ドより 下の音は「<b>低い</b>」を つけて よぶ。', staff: { notes: [N(0, 'w')], names: true, minMW: 120 } },
+          { text: '<b>低いシ</b>：ドの 加線の <b>すぐ下</b>（加線に ぶらさがる）。', staff: { notes: [N(0, 'h'), N(-1, 'h')], names: true, minMW: 120 }, play: 'seq' },
+          { text: '<b>低いラ</b>：加線が <b>2本</b>。下の 加線が 音符の まん中を 通る。', staff: { notes: [N(-1, 'h'), N(-2, 'h')], names: true, minMW: 120 }, play: 'seq' },
+          { text: '<b>低いソ</b>：加線2本の <b>すぐ下</b>（ぶらさがる）。ド・低いシ・低いラ・低いソ と 下がっていくよ。', staff: { notes: [N(0), N(-1), N(-2), N(-3, 'w')], names: true }, play: 'seq' }
+        ],
         gen: i => i % 3 === 2 ? tapQ(rangeArr(-3, 2)) : noteNameQ(rangeArr(-3, 2))
       },
       {
         id: '5-2', title: '高いレ・高いミ', sub: '五線の上のほう', n: 10,
-        learn: [{ text: '<b>高いレ</b>は 上から2本目の線（下から4ばん目）。<b>高いミ</b>は 上から1ばん目の間。', staff: { notes: [N(7), N(8), N(9, 'h')], names: true }, play: 'seq' }],
+        learn: [
+          { text: '<b>高いレ</b>は 上から2本目の線（下から4ばん目の線）。', staff: { notes: [N(7, 'h'), N(8, 'h')], names: true, minMW: 120 }, play: 'seq' },
+          { text: '<b>高いミ</b>は 上から1ばん目の間。', staff: { notes: [N(8, 'h'), N(9, 'h')], names: true, minMW: 120 }, play: 'seq' },
+          { text: 'その上、<b>いちばん上の線</b>は <b>高いファ</b>。歌の 楽譜で ときどき 出てくるよ。', staff: { notes: [N(7), N(8), N(9), N(10, 'h')], names: true }, play: 'seq' }
+        ],
         gen: i => i % 3 === 2 ? tapQ(rangeArr(5, 9)) : noteNameQ(rangeArr(4, 9))
       },
       {
@@ -2136,34 +2195,57 @@ const ISLANDS = [
       {
         id: '5-4', title: '付点の音符と 3拍子', sub: 'ターアア・ターンタ', n: 9,
         learn: [
-          { text: '音符の右の <b>点</b>は「半分 たす」。<b>付点2分音符</b>は 2＋1＝<b>3拍</b>。', staff: { notes: [N(4, 'hd'), N(4)], clef: false, time: '4/4' }, play: 'rhythm' },
-          { text: '<b>付点4分音符</b>は 1＋半分＝<b>1拍半</b>。8分音符と組んで「<b>ターンタ</b>」。', staff: { notes: [N(4, 'qd'), N(4, '8'), N(4, 'h')], clef: false, time: '4/4' }, play: 'rhythm' },
-          { text: '<b>4分の3拍子</b>：1小節に 4分音符 <b>3こ分</b>。ワルツの リズム！', staff: { notes: [N(4), N(4), N(4), N(4, 'hd')], clef: false, time: '3/4' }, play: 'rhythm' }
+          { text: '思い出そう。<b>2分音符＝2拍</b>、<b>4分音符＝1拍</b>、<b>8分音符＝半拍</b>（2つで1拍）。', visual: eqVisual([['h'], ['q'], ['8']], ['2拍', '1拍', '半拍']) },
+          { text: '音符の右に <b>点</b>が つくと「その音符の <b>半分の長さを たす</b>」。点の ついた音符を <b>付点音符</b> というよ。', visual: eqVisual([['h'], '→', ['hd']], ['2分音符', '', '付点2分音符']) },
+          { text: '<b>付点2分音符</b>：2分音符（2拍）＋ その半分（1拍）＝ <b>3拍</b>。「ターアア」。', visual: eqVisual([['hd'], '＝', ['h'], '＋', ['q']], ['3拍', '', '2拍', '', '1拍']), staff: { notes: [N(4, 'hd'), N(4)], clef: false, time: '4/4' }, play: 'rhythm' },
+          { text: '<b>付点4分音符</b>：4分音符（1拍）＋ その半分（半拍）＝ <b>1拍半</b>。', visual: eqVisual([['qd'], '＝', ['q'], '＋', ['8']], ['1拍半', '', '1拍', '', '半拍']) },
+          { text: '付点4分音符（1拍半）の あとに 8分音符（半拍）で ちょうど 2拍。「<b>ターンタ</b>」と 読むよ。', staff: { notes: [N(4, 'qd'), N(4, '8'), N(4, 'qd'), N(4, '8')], clef: false, time: '4/4' }, play: 'rhythm' },
         ],
-        gen: i => [() => symbolQ(['hd', 'qd', 'h', 'q'], 'beats'), () => rightBarQ(6, 3), () => rhythmQ(6, 1, i % 2 ? 3 : 4)][i % 3]()
+        gen: i => [() => symbolQ(['hd', 'qd', 'h', 'q'], 'beats'), () => symbolQ(['hd', 'qd', 'h', 'q', '8']), () => rhythmQ(6, 1, 4)][i % 3]()
       },
       {
-        id: '5-5', title: 'タイと 16分音符', sub: 'つなぐ・タカタカ', n: 9,
+        id: '5-4b', title: '4分の3拍子', sub: 'ワルツの リズム', n: 9,
         learn: [
-          { text: '<b>タイ</b>は 同じ高さの音を つなぐ線。2つで <b>1つの ながい音</b>になるよ（2拍＋1拍＝3拍）。', staff: { notes: [N(4, 'h', { tie: true }), N(4), N(4)], clef: true, time: '4/4' }, play: 'seq' },
-          { text: '<b>16分音符</b>は 4つで 1拍。「<b>タカタカ</b>」。はしごが 2だん！', staff: { notes: [N(4, '16'), N(4, '16'), N(4, '16'), N(4, '16'), N(4), N(4, 'h')], clef: false, time: '4/4' }, play: 'rhythm' }
+          { text: '思い出そう。<b>4分の4拍子</b>は 1小節に 4分音符 4こ分、<b>4分の2拍子</b>は 2こ分 だったね。', staff: { notes: [N(4), N(4), N(4), N(4), N(4), N(4), N(4, 'h')], clef: false, time: '4/4' } },
+          { text: '<b>4分の3拍子</b>：1小節に 4分音符 <b>3こ分</b>。「1・2・3、1・2・3」と、1を 強く。ワルツの リズム！', staff: { notes: [N(4), N(4), N(4), N(4, 'h'), N(4)], clef: false, time: '3/4' }, play: 'rhythm' },
+          { text: '<b>付点2分音符</b>（3拍）は、4分の3拍子の 1小節に ぴったり 入るよ。', staff: { notes: [N(4), N(4), N(4), N(4, 'hd')], clef: false, time: '3/4' }, play: 'rhythm' }
+        ],
+        gen: i => [() => rightBarQ(6, 3), () => barSumQ(6, 3), () => rhythmQ(6, 1, 3)][i % 3]()
+      },
+      {
+        id: '5-5', title: 'タイ', sub: '同じ高さの音を つなぐ', n: 9,
+        learn: [
+          { text: '<b>タイ</b>は 同じ高さの音を つなぐ 弓の形の線。つながった 2つの音は、<b>1回だけ ならして のばす</b>よ。', staff: { notes: [N(4, 'h', { tie: true }), N(4), N(4)], clef: true, time: '4/4' }, play: 'seq' },
+          { text: '長さは 2つを たす。2分音符（2拍）＋ 4分音符（1拍）＝ <b>3拍</b>。4分音符（1拍）＋ 8分音符（半拍）＝ <b>1拍半</b>。', visual: eqVisual([[N(4, 'h', { tie: true }), N(4, 'q')], '＝', ['hd'], '　', [N(4, 'q', { tie: true }), N(4, '8')], '＝', ['qd']], ['3拍', '', '3拍', '', '1拍半', '', '1拍半']) },
         ],
         gen: i => {
           if (i % 3 === 0) {
-            const a = pick(['h', 'q', 'hd']), b = pick(['q', 'h', '8']);
+            const a = pick(['h', 'q']), b = pick(['q', 'h', '8']);
             const tot = BEATS[a] + BEATS[b];
             const opts = [...new Set([tot, tot + 1, tot - .5, tot + .5].filter(x => x > 0))].slice(0, 4).sort((x, y) => x - y);
             const lab = x => x === 0.5 ? '半拍' : (x % 1 ? Math.floor(x) + '拍半' : x + '拍');
             return { type: 'choice', prompt: 'タイで つないだ音は 何拍？', staff: { notes: [N(4, a, { tie: true }), N(4, b)], scale: 2 }, choices: opts.map(x => ({ label: lab(x), ok: x === tot })), hint: '2つの音符の 拍を たそう。' };
           }
-          if (i % 3 === 1) return symbolQ(['16', '8', 'q', 'qd'], 'beats');
-          return rhythmQ(7, 1, 4, 66);
+          if (i % 3 === 1) return artTieQ();
+          return rhythmQ(6, 1, 4);
         }
       },
       {
+        id: '5-5b', title: '16分音符', sub: 'タカタカ（1拍に4つ）', n: 9,
+        learn: [
+          { text: '思い出そう。<b>8分音符</b>は 半拍、2つで 1拍「タタ」。', staff: { notes: [N(4, '8'), N(4, '8'), N(4, '8'), N(4, '8'), N(4, 'h')], clef: false, time: '4/4' }, play: 'rhythm' },
+          { text: '<b>16分音符</b>は はしごが <b>2だん</b>。1つで <b>4分の1拍</b>、<b>4つで 1拍</b>。「<b>タカタカ</b>」。', visual: eqVisual([[N(4, '16'), N(4, '16'), N(4, '16'), N(4, '16')], '＝', ['q']], ['4つで 1拍', '', '1拍']), staff: { notes: [N(4, '16'), N(4, '16'), N(4, '16'), N(4, '16'), N(4), N(4, 'h')], clef: false, time: '4/4' }, play: 'rhythm' },
+          { text: '16分音符 2つと 8分音符で「<b>タカタ</b>」、8分音符と 16分音符 2つで「<b>タタカ</b>」。どちらも ちょうど <b>1拍</b>。', staff: { notes: [N(4, '16'), N(4, '16'), N(4, '8'), N(4, '8'), N(4, '16'), N(4, '16'), N(4, 'h')], clef: false, time: '4/4' }, play: 'rhythm' }
+        ],
+        gen: i => [() => symbolQ(['16', '8', 'q', 'qd'], 'beats'), () => symbolQ(['16', '8', 'q', '8r']), () => rhythmQ(7, 1, 4, 66)][i % 3]()
+      },
+      {
         id: '5-6', title: 'ぜんぶの音', sub: '低いソ〜高いミ', n: 12,
-        learn: [{ text: '低いソから 高いミまで、ぜんぶで 13の音。これが読めたら どんな曲も こわくない！', staff: { notes: rangeArr(-3, 9).map(s => N(s)), names: true, noteW: 40 }, play: 'seq' }],
-        gen: i => [noteNameQ, tapQ, noteNameQ, higherQ][i % 4](rangeArr(-3, 9))
+        learn: [
+          { text: '低いソから 高いミまで、ぜんぶで 13の音。これが読めたら どんな曲も こわくない！', staff: { notes: rangeArr(-3, 9).map(s => N(s)), names: true, noteW: 40 }, play: 'seq' },
+          { text: 'けんばんでは、まん中のドの <b>左</b>へ 低いシ・低いラ・低いソ、高いドの <b>右</b>へ 高いレ・高いミ。', kb: { labels: true, hl: [55, 57, 59, 74, 76] } }
+        ],
+        gen: i => i % 5 === 4 ? keyQ(pick(rangeArr(-3, 9))) : [noteNameQ, tapQ, noteNameQ, higherQ][i % 4](rangeArr(-3, 9))
       },
       {
         id: '5-7', title: '付点8分音符と タッカ', sub: 'はねる リズム', n: 9,
@@ -2200,21 +2282,29 @@ const ISLANDS = [
       {
         id: '6-2', title: 'くり返しの 記号', sub: 'リピート・1番かっこ・2番かっこ', n: 8,
         learn: [
-          { text: '<b>くり返し記号</b>：<b>|:</b>（はじまり）から <b>:|</b>（おわり）までを、<b>もう一回</b> えんそうするよ。<br>この楽譜は ①②③④ と進んで、③④ を もう一回。<br><small>:| だけで |: が ないときは、さいしょに もどって もう一回。</small>', staff: { notes: [N(0), N(2), N(4), N(2), N(3), N(1), N(2, 'h'), N(4), N(5), N(4), N(2), N(3), N(1), N(0, 'h')], time: '4/4', scale: 1.6, noteW: 34, minMW: 80, narrowNoteW: 26, narrowMinScale: 0.85, labels: { 0: '①', 1: '②', 2: '③', 3: '④' }, repeatStart: 2, repeatEnd: 3 }, extra: 'じゅんばん：①②③④<b>③④</b>' },
+          { text: '<b>くり返し記号</b>：<b>|:</b>（はじまり）から <b>:|</b>（おわり）までを、<b>もう一回</b> えんそうするよ。<br>この楽譜は ①②③④ と進んで、③④ を もう一回。', staff: { notes: [N(0), N(2), N(4), N(2), N(3), N(1), N(2, 'h'), N(4), N(5), N(4), N(2), N(3), N(1), N(0, 'h')], time: '4/4', scale: 1.6, noteW: 34, minMW: 80, narrowNoteW: 26, narrowMinScale: 0.85, labels: { 0: '①', 1: '②', 2: '③', 3: '④' }, repeatStart: 2, repeatEnd: 3 }, extra: 'じゅんばん：①②③④<b>③④</b>' },
+          { text: '<b>:|</b> だけで <b>|:</b> が ないときは、<b>さいしょに もどって</b> もう一回。この楽譜は ①② のあと ①② を もう一回、それから ③④。', staff: { notes: [N(0), N(2), N(4), N(2), N(3), N(1), N(2, 'h'), N(4), N(5), N(4), N(2), N(3), N(1), N(0, 'h')], time: '4/4', scale: 1.6, noteW: 34, minMW: 80, narrowNoteW: 26, narrowMinScale: 0.85, labels: { 0: '①', 1: '②', 2: '③', 3: '④' }, repeatEnd: 1 }, extra: 'じゅんばん：①②<b>①②</b>③④' },
           { text: '<b>1番かっこ・2番かっこ</b>：1回目は ①②③（1番かっこ）まで進んで、:| で さいしょに もどる。<br>2回目は ①② のあと、1番かっこの ③ を とばして 2番かっこの ④ へ。', staff: { notes: [N(0), N(2), N(4), N(2), N(3), N(1), N(2, 'h'), N(4), N(5), N(4), N(2), N(3), N(1), N(0, 'h')], time: '4/4', scale: 1.6, noteW: 34, minMW: 80, narrowNoteW: 26, narrowMinScale: 0.85, labels: { 0: '①', 1: '②', 2: '③', 3: '④' }, repeatEnd: 2, volta: { 2: '1.', 3: '2.' } }, extra: 'じゅんばん：①②③<b>①②④</b>' }
         ],
         gen: () => repeatQ()
       },
       {
-        id: '6-3', title: 'えんそうの しかたの記号', sub: 'スラー・スタッカート…', n: 9,
-        learn: ARTS.map(a => ({ text: `<b>${a.name}</b>：${a.imi}。`, staff: { notes: a.notes, slurs: a.slurs }, play: 'seq' })),
+        id: '6-3', title: '音の 出し方の記号', sub: 'スタッカート・アクセント・フェルマータ', n: 9,
+        learn: ARTS.slice(0, 3).map(a => ({ text: `<b>${a.name}</b>：${a.imi}。`, staff: { notes: a.notes, slurs: a.slurs }, play: 'seq' })),
+        gen: () => artQ(ARTS.slice(0, 3))
+      },
+      {
+        id: '6-3b', title: 'つなぐ・息つぎの記号', sub: 'スラー・タイ・ブレス', n: 9,
+        learn: ARTS.slice(3).map(a => ({ text: `<b>${a.name}</b>：${a.imi}。` + (a.k === 'slur' ? '<br><small>タイと にているけど、スラーは <b>ちがう高さ</b>の音を つなぐよ。</small>' : ''), staff: { notes: a.notes, slurs: a.slurs }, play: 'seq' })),
         gen: () => artQ()
       },
       {
         id: '6-4', title: 'シャープ・フラット', sub: '♯ ♭ ♮', n: 9,
         learn: [
-          { text: '<b>♯（シャープ）</b>は 半音 上げる。けんばんでは すぐ右どなり。ファ♯ は ファの右の 黒いけんばん。', staff: { notes: [N(3, 'h'), N(3, 'h', { acc: '#' })], names: true, minMW: 160 }, kb: { labels: true, hl: [66] } },
-          { text: '<b>♭（フラット）</b>は 半音 下げる。シ♭ は シの左の 黒いけんばん。<b>♮（ナチュラル）</b>は もとにもどす。', staff: { notes: [N(6, 'h'), N(6, 'h', { acc: 'b' })], names: true, minMW: 160 }, kb: { labels: true, hl: [70] } }
+          { text: '<b>♯（シャープ）</b>は 半音 上げる。けんばんでは すぐ右どなり。ファ♯ は ファの右の 黒いけんばん。', staff: { notes: [N(3, 'h'), N(3, 'h', { acc: '#' })], names: true, minMW: 160 }, kb: { labels: true, from: 0, to: 9, hl: [66] } },
+          { text: '<b>♭（フラット）</b>は 半音 下げる。シ♭ は シの左の 黒いけんばん。', staff: { notes: [N(6, 'h'), N(6, 'h', { acc: 'b' })], names: true, minMW: 160 }, kb: { labels: true, from: 0, to: 9, hl: [70] } },
+          { text: '<b>♮（ナチュラル）</b>は ♯や♭を とりけして <b>もとの高さに もどす</b>。シ♭ → シ♮（ふつうの シ）。', staff: { notes: [N(6, 'h', { acc: 'b' }), N(6, 'h', { acc: 'n' })], names: true, minMW: 160 } },
+          { text: '♯と♭は ほかの音にも つくよ。♯は すぐ右どなり、♭は すぐ左どなりの けんばん。ド♯は ドの右、ソ♯は ソの右、ミ♭は ミの左の 黒いけんばん。', staff: { notes: [N(0, 'q', { acc: '#' }), N(4, 'q', { acc: '#' }), N(2, 'h', { acc: 'b' })], names: true }, kb: { labels: true, from: 0, to: 9, hl: [61, 68, 63] } }
         ],
         gen: () => accQ()
       },
@@ -2226,9 +2316,9 @@ const ISLANDS = [
       {
         id: '6-6', title: 'ヘ音記号', sub: '5・6年の 先どり：低い音の楽譜', n: 10, extra: true,
         learn: [
-          { text: '低い音の楽譜には <b>ヘ音記号</b>を使うよ。ピアノの左手や 低い楽器の楽譜で 見かけるよ。', staff: { notes: [N(-4, 'w')], clef: 'bass', minMW: 120, top: 14 }, play: () => Audio2.note(53, 1) },
+          { text: '低い音の楽譜には <b>ヘ音記号</b>を使うよ。ピアノの左手や 低い楽器の楽譜で 見かけるよ。<br><small>ヘ音記号の 楽譜では「低い」「高い」を つけずに、ド・レ・ミ… で よぶよ。</small>', staff: { notes: [N(-4, 'w')], clef: 'bass', minMW: 120, top: 14 }, play: () => Audio2.note(53, 1) },
           { text: 'ヘ音記号の <b>2つの点</b>に はさまれた線（上から2本目）が <b>ファ</b>。ここが 目じるし！', staff: { notes: [N(-4, 'w')], clef: 'bass', names: true, ctx: 'bass', minMW: 120, top: 14 }, play: () => Audio2.note(53, 1) },
-          { text: '下の <b>ド</b>（下から2ばん目の間）から 線・間・線…と 上がっていくよ。<b>2つの点の線が ファ</b>。ト音記号より 1オクターブ ひくい音だよ。', staff: { notes: rangeArr(-7, -1).map(s => N(s)), clef: 'bass', names: true, ctx: 'bass' }, play: 'seq' }
+          { text: '下の <b>ド</b>（下から2ばん目の間）から 線・間・線…と 上がっていくよ。<b>2つの点の線が ファ</b>。ト音記号の 楽譜の ドより、8つ 下の ドから はじまる 低い音だよ。', staff: { notes: rangeArr(-7, -1).map(s => N(s)), clef: 'bass', names: true, ctx: 'bass' }, play: 'seq' }
         ],
         gen: i => i % 3 === 0 ? clefQ() : noteNameQ(i < 4 ? rangeArr(-7, -3) : rangeArr(-7, -1), { clef: 'bass' })
       }
@@ -2243,7 +2333,7 @@ const ISLANDS = [
       { id: '7-4', title: 'どの 旋律？', sub: '聞いて 楽譜をえらぶ', n: 8, learn: [{ text: '4つの音の 旋律が ながれるよ。音が <b>上がったか・下がったか</b>を 楽譜で さがそう。' }], gen: i => earMelodyQ(i < 4 ? rangeArr(0, 4) : rangeArr(0, 7)) },
       {
         id: '7-5', title: '楽譜を見て 歌おう', sub: '階名で 歌ってみよう', n: 4,
-        learn: [{ text: '楽譜を見て <b>階名で歌おう</b>。おてほんを聞いてから どうぞ。マイクを使うと、歌った高さを 聞いてくれるよ。' }],
+        learn: [{ text: '楽譜を見て、ド・レ・ミ… の <b>階名</b>（ドレミの浜で ならった よび名）で 歌おう。おてほんを聞いてから どうぞ。マイクを使うと、歌った高さを 聞いてくれるよ。' }],
         gen: i => { const m = [MELODIES[2], MELODIES[0], MELODIES[4], MELODIES[1]][i % 4]; return { type: 'blowSeq', prompt: `「${m.title}」を 階名で 歌おう`, notes: m.notes, kind: 'sing', hint: '光っている音符を 歌おう。' }; }
       }
     ]
@@ -2638,12 +2728,14 @@ function kySingQ(song) {
 }
 /* 6. 拍子は いくつ？（楽譜を見て 拍子を 読む） */
 function kyTimeQ(g) {
-  const sure = kySongs(g).filter(s => !/拍子/.test(s.memo || ''));
-  const song = pick(sure.length ? sure : kySongs(g));
+  const sure = kySongs(g).filter(s => !/拍子/.test(s.memo || '') && !s.pickup);
+  if (!sure.length) return kyReadQ(pick(kySongs(g)));
+  const song = pick(sure);
   const notes = kyPhrase(song, 0);
   const all = ['2/4', '3/4', '4/4', '6/8'];
   const name = t => t === '6/8' ? '8分の6拍子' : `4分の${t[0]}拍子`;
-  const opts = shuffle([song.time].concat(shuffle(all.filter(t => t !== song.time)).slice(0, 2)));
+  const clash = { '3/4': '6/8', '6/8': '3/4' }; // 小節の長さが 同じで 見分けられない組は いっしょに 出さない
+  const opts = shuffle([song.time].concat(shuffle(all.filter(t => t !== song.time && t !== clash[song.time])).slice(0, 2)));
   return {
     type: 'choice', prompt: `「${song.title}」は 何拍子？`,
     staff: kyStaff(song, notes, song.pickup, { scale: 1.5, fit: true, hideTime: true, end: false }),
@@ -2657,10 +2749,10 @@ function kyStage(g) {
   const list = kySongs(g);
   return {
     id: '9-' + g, title: `${KY_GRADE_NAME(g)}の 共通教材`, sub: list.map(s => s.title).join('・'), n: Math.max(8, list.length * 3),
-    learn: list.map((song, i) => ({
-      text: `${i === 0 ? `${KY_GRADE_NAME(g)}で みんなが 歌う曲（共通教材）の 楽譜だよ。${KY_MISSING[g] ? `<br><small>${KY_MISSING[g]}</small>` : ''}<br>` : ''}<b>「${song.title}」</b>　${song.origin}・${song.time === '6/8' ? '8分の6拍子' : `4分の${song.time[0]}拍子`}。おてほんに 合わせて、階名を 読んでみよう。`,
+    learn: [{ text: `<b>${KY_GRADE_NAME(g)}の 共通教材</b>：${KY_GRADE_NAME(g)}で みんなが 歌う曲の 楽譜を 読もう。ここまでの 島で ならった 音符と 階名で 読めるよ。`, visual: el => el.appendChild(h('div', { class: 'row c', style: { gap: '10px' } }, list.map(sg => h('span', { class: 'pill', style: { fontSize: '1em' } }, '♪ ' + sg.title)))) }].concat(list.map((song, i) => ({
+      text: `<b>「${song.title}」</b>　${song.origin}・${song.time === '6/8' ? '8分の6拍子' : `4分の${song.time[0]}拍子`}${song.pickup ? '。<br><small>はじめの 小節が 短いのは「弱起（じゃっき）」。拍の とちゅうから 歌いはじめる 曲だよ。</small>' : ''}。おてほんに 合わせて、階名を 読んでみよう。`,
       staff: kyStaff(song, song.notes, song.pickup, { names: true, scale: 1.5, fit: true, minScale: 1.0, noteW: 60, narrowNoteW: 46, narrowMinScale: 0.78 }), play: 'seq'
-    })),
+    }))),
     gen: i => {
       // 曲と 問題の種類が かたよらないように、曲は順番に・種類は ずらしながら回す
       const song = list[i % list.length];
@@ -2841,7 +2933,7 @@ function artNews() {
   Store.data.art2Seen = 1; Store.save();
   const used = (me.xp || 0) > 0 || Object.keys(me.stars || {}).length > 0;
   if (!used) return false;
-  dialog({ art: guideSvg().replace('<svg ', '<svg width="130" class="bob" '), title: '島が 新しく なったよ！', text: 'ピッチや なかま、島の 絵が かわったよ。\nきみの ★・ランク・なかまは そのまま のこっているよ。\n島の 名前と ステージの じゅんばんも 今までと 同じだよ。', buttons: [{ label: 'わかった！', value: true, cls: 'sun big' }], outside: false }).then(() => flushCele());
+  dialog({ art: guideSvg().replace('<svg ', '<svg width="130" class="bob" '), title: '島が 新しく なったよ！', text: 'ピッチや なかま、島の 絵が かわったよ。\nきみの ★・ランク・なかまは そのまま のこっているよ。\n島の 名前は 今までと 同じ。説明が 1つずつ わかりやすく なって、ステージも 少し ふえたよ。', buttons: [{ label: 'わかった！', value: true, cls: 'sun big' }], outside: false }).then(() => flushCele());
   return true;
 }
 
@@ -2942,7 +3034,7 @@ function stageScreen(st) {
       if (c.syms) c.syms.forEach(k => { const d = DYN.concat(HAIR).find(x => x.k === k); vbox.appendChild(h('div', { class: 'center', style: { width: 'min(170px,40vw)' } }, svgEl(symbolSvg(k)), h('div', { style: { fontWeight: 700, fontSize: '.85em' } }, d.yomi), h('div', { class: 'em', style: { fontSize: '.85em' } }, d.imi))); });
       if (c.visual) c.visual(vbox);
       if (vbox.childNodes.length) vis.appendChild(vbox);
-      if (c.kb) { const kb = makeKeyboard({ labels: c.kb.labels }); (c.kb.hl || []).forEach(m => kb.keys[m] && kb.keys[m].classList.add('hintk')); vis.appendChild(kb.el); }
+      if (c.kb) { const kb = makeKeyboard({ labels: c.kb.labels, from: c.kb.from, to: c.kb.to }); (c.kb.hl || []).forEach(m => kb.keys[m] && kb.keys[m].classList.add('hintk')); vis.appendChild(kb.el); }
       if (c.extra) vis.appendChild(h('div', { class: 'center h2', html: c.extra }));
       if (vis.childNodes.length) wrap.appendChild(vis);
       const doPlay = () => {
