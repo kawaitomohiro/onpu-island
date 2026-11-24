@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
-<link rel="preload" as="image" href="img/key.webp?v=2">
+<link rel="preload" as="image" href="img/key.webp?v=3">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Zen+Maru+Gothic:wght@700;900&display=swap" rel="stylesheet">
@@ -96,8 +96,8 @@ input{font-family:var(--fb);font-size:inherit}
 #splash{position:fixed;inset:0;z-index:50;overflow:hidden;background:#47b8ef;transition:opacity .6s, transform .6s;text-align:center}
 #splash.out{opacity:0;transform:scale(1.04);pointer-events:none}
 #splash .kv{position:absolute;inset:0}
-#splash .kv::before{content:"";position:absolute;inset:-40px;background:url(img/key.webp?v=2) center/cover;filter:blur(18px) saturate(1.1)}
-#splash .kv::after{content:"";position:absolute;inset:0;background:url(img/key.webp?v=2) center bottom/contain no-repeat}
+#splash .kv::before{content:"";position:absolute;inset:-40px;background:url(img/key.webp?v=3) center/cover;filter:blur(18px) saturate(1.1)}
+#splash .kv::after{content:"";position:absolute;inset:0;background:url(img/key.webp?v=3) center bottom/contain no-repeat}
 @media (max-aspect-ratio:3/4){#splash .kv::before{filter:none;inset:0;background-position:center 85%}#splash .kv::after{display:none}}
 #splash .sptop{position:absolute;left:0;right:0;top:max(5vh, env(safe-area-inset-top));display:flex;flex-direction:column;align-items:center;gap:1.4vh;padding:0 16px}
 #splash .ribbon{font-family:var(--fj);font-weight:900;color:#fff;font-size:clamp(17px,2.6vh,28px);padding:.25em 1.3em;border-radius:14px;background:linear-gradient(180deg,#ff6b6b,#e63950);
@@ -483,6 +483,43 @@ input{font-family:var(--fb);font-size:inherit}
   #splash .ribbon{font-size:clamp(17px,3.6vh,36px)}
   #splash .tag{font-size:clamp(16px,3.4vh,34px)}
 }
+/* ずかん・つぎの なかま */
+img.sil{filter:brightness(0) opacity(.22)}
+.zhead{background:#fff;border-radius:24px;box-shadow:var(--shadow);padding:14px 18px;border:4px solid #ffe08a;display:grid;gap:8px}
+.zcount b{font-family:var(--fj);font-weight:900;font-size:2em;color:#b07d00}
+.zcount small{font-family:var(--fj);font-weight:700;color:var(--ink2)}
+.zbuddy{display:flex;align-items:center;gap:10px;font-size:.85em;color:var(--ink2)}
+.zbuddy img{width:52px;height:52px;object-fit:contain;animation:bob 2.6s ease-in-out infinite}
+.znext{margin-top:16px}
+.znrow{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.nfcard{background:linear-gradient(180deg,#eef6ff,#fff);border-radius:20px;border:3px dashed #9ccbf0;padding:10px 8px;display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center}
+.nfcard img{width:70px;height:70px;object-fit:contain}
+.nfcard small{font-size:.72em;line-height:1.35;color:#24527a;font-family:var(--fj);font-weight:700}
+.nfcard .xpbar{width:90%}
+.fcard{position:relative}
+.fcard .fart img{width:100%;height:100%;object-fit:contain}
+.fcard .xpbar{width:86%;margin-top:4px}
+.fcard.buddy{border-color:var(--sun);box-shadow:var(--shadow),0 0 0 4px rgba(255,197,49,.5)}
+.btag{position:absolute;top:8px;right:8px;background:var(--sun);color:#3d2a00;font-family:var(--fj);font-weight:900;font-size:.7em;padding:.05em .6em;border-radius:99px}
+.btoast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:80;display:flex;align-items:center;gap:10px;background:#fff;border-radius:99px;padding:6px 18px 6px 8px;box-shadow:0 10px 30px rgba(0,0,0,.2);font-family:var(--fj);font-weight:900;animation:fadeUp .3s}
+.btoast img{width:48px;height:48px;object-fit:contain}
+/* ホームの つぎの なかま */
+.nextfr{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:#fff;border-radius:24px;box-shadow:var(--shadow);border:4px dashed #9ccbf0;padding:10px 14px}
+.nextfr img{width:72px;height:72px;object-fit:contain;flex:0 0 auto}
+.nextfr .nt{flex:1;min-width:0}
+.nextfr b{display:block;font-family:var(--fj);font-weight:900;font-size:1.02em;color:#24527a}
+.nextfr small{display:block;font-size:.8em;color:var(--ink2);line-height:1.4}
+.nextfr .xpbar{margin-top:6px}
+.hero-buddy{position:absolute;z-index:2;width:24%;max-width:130px;left:6%;top:36%;filter:drop-shadow(0 8px 8px rgba(0,0,0,.25));animation:bob 2.8s ease-in-out infinite reverse}
+@media (max-width:520px){.znrow{gap:6px}.nfcard img{width:56px;height:56px}}
+.manyf{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px;margin:6px 0 10px;max-height:46dvh;overflow:auto}
+.manyf div{display:flex;flex-direction:column;align-items:center;text-align:center}
+.manyf img{width:72px;height:72px;object-fit:contain;animation:pop .5s cubic-bezier(.2,1.6,.4,1) both}
+.manyf small{font-family:var(--fj);font-weight:700;font-size:.72em;line-height:1.3}
+.zukan .sechd{flex-direction:column;align-items:flex-start;gap:2px}
+.zukan .sechd b{white-space:nowrap}
+.btoast{white-space:nowrap;max-width:94vw}
+.btoast span{overflow:hidden;text-overflow:ellipsis}
 
 </style>
 </head>
@@ -2677,6 +2714,7 @@ function homeScreen() {
     const hero = h('div', { class: 'hero', style: `--bg:url(${artUrl('key')})` },
       h('div', { class: 'hero-bubble', html: greet }),
       h('img', { class: 'hero-pitch bob', src: artUrl('f_pitch'), alt: 'ピッチ' }),
+      buddyOf(me) ? h('img', { class: 'hero-buddy', src: artUrl('f_' + buddyOf(me).id), alt: buddyOf(me).name }) : null,
       nx ? h('img', { class: 'hero-isl', src: artUrl('isl_' + nx.island.id), alt: '' }) : null,
       h('div', { class: 'hero-foot' },
         prof,
@@ -2689,6 +2727,11 @@ function homeScreen() {
       h('img', { src: artUrl('f_hoshi'), alt: '' }),
       h('div', { class: 'qt' }, h('b', null, 'きょうの チャレンジ'), h('small', null, done ? 'きょうは できた！ もう一回 やっても いいよ' : 'ぜんぶの島から 5問。毎日 やると なかまが ふえるよ')),
       h('span', { class: 'go' }, done ? 'できた' : 'いく！'));
+    const nf = nextFriends(me, 1)[0];
+    const nextfr = nf ? h('button', { class: 'nextfr', onclick: tap(() => friendDialog(nf.f)) },
+      h('img', { class: 'sil', src: artUrl('f_' + nf.f.id), alt: '' }),
+      h('div', { class: 'nt' }, h('b', null, 'もうすぐ 会える なかま'), h('small', null, nf.lab(nf.rest) + 'で 会えるよ'),
+        h('div', { class: 'xpbar slim' }, h('i', { style: { width: (nf.r * 100) + '%' } })))) : null;
     const tiles = h('div', { class: 'tiles' },
       h('button', { class: 'tile', onclick: tap(friendsScreen) },
         h('div', { class: 'tstack' }, ['f_doremin', 'f_tantan', 'f_kenba'].map(n => h('img', { src: artUrl(n), alt: '' }))),
@@ -2718,7 +2761,7 @@ function homeScreen() {
     const wrap = h('div', { class: 'wrap', style: { maxWidth: '1200px' } });
     const world = use3d ? h('div', { class: 'world' }, h('div', { class: 'hint3d' }, '島を タップ！ ゆびで うごかすと 見まわせるよ')) : null;
     wrap.append(...[
-      h('div', { class: 'homegrid' }, hero, h('div', { class: 'side' }, quest, tiles)),
+      h('div', { class: 'homegrid' }, hero, h('div', { class: 'side' }, quest, nextfr, tiles)),
       world ? h('div', { class: 'sechd' }, h('b', null, '3Dの 島'), h('small', null, 'ゆびで まわせるよ')) : null,
       world,
       h('div', { class: 'sechd' }, h('b', null, '島の 地図'), h('small', null, `★ ${total}`)),
@@ -2918,6 +2961,7 @@ function practice(st, scr, body) {
       else if (stars <= before) { bonus = 5; per = Math.round(per / 4); } // ★が ふえない くり返しは ちょっとだけ
       Store.setStars(st.id, stars);
     }
+    me.bestCombo = Math.max(me.bestCombo || 0, state.best); // れんぞく せいかいの さいこう（なかまの 条件）
     const xpRes = addXP(per + bonus);
     queueCele(checkFriends().map(f => ({ type: 'friend', id: f.id })));
     if (xpRes.rankUp) queueCele([{ type: 'rank', name: rankProgress(xpRes.after).name }], true);
@@ -2931,9 +2975,9 @@ function practice(st, scr, body) {
     const rp0 = rankProgress(xpRes.before), rp1 = rankProgress(xpRes.after);
     const bar = h('i', { style: { width: (rp0.r === rp1.r ? rp0.pct * 100 : 0) + '%' } });
     const xpNum = h('b', null, '+0');
-    const fid = ISLAND_FRIEND[isl.id];
+    const bdy = buddyOf(Store.me), fid = bdy ? bdy.id : ISLAND_FRIEND[isl.id];
     wrap.appendChild(h('div', { class: 'card center result', style: { maxWidth: '640px', margin: '3vh auto 0' } },
-      h('div', { class: 'res-cast' }, h('img', { class: 'jump', src: artUrl('f_pitch'), alt: '' }), fid && !st.daily ? h('img', { class: 'jump d2', src: artUrl('f_' + fid), alt: '', style: Store.me && Store.me.friends && Store.me.friends[fid] ? '' : 'display:none' }) : null),
+      h('div', { class: 'res-cast' }, h('img', { class: 'jump', src: artUrl('f_pitch'), alt: '' }), fid && (bdy || !st.daily) && hasF(Store.me, fid) ? h('img', { class: 'jump d2', src: artUrl('f_' + fid), alt: '' }) : null),
       h('div', { class: 'h1' }, msg),
       h('div', { class: 'result-stars' }, [0, 1, 2].map(k => svgEl(starSvg(k < stars)))),
       h('div', { class: 'muted' }, `${n}問中 ${state.firstOk}問 一回で せいかい` + (state.best >= 3 ? `　さいこう ${state.best}れんぞく！` : '')),
@@ -3893,7 +3937,7 @@ async function celebrate(list) {
    前の SVG の絵（guideSvg・friendSvg・islandArt・splashArt）を、描いた絵に おきかえる。
    どれも「<svg>の中に<image>」を返すので、今までの使い方（svgEl・.replace('<svg ', …)）のまま動く。
    絵は _作り直し用/画像/元絵 → cut_art.py → docs/img/*.webp */
-const ART_V = 2;
+const ART_V = 3;
 let artSeq = 0;
 function artUrl(n) { return 'img/' + n + '.webp?v=' + ART_V; }
 function imgSvg(n, opt) {
@@ -3927,6 +3971,145 @@ function logoEl(text, cls) {
   const el = h('div', { class: 'logo3 ' + (cls || '') });
   [...text].forEach((c, i) => el.appendChild(h('span', { style: `--c:${cols[i % cols.length]};animation-delay:${(i * 0.05).toFixed(2)}s` }, c)));
   return el;
+}
+
+/* ===== なかまを ふやす（2026-11-24）：12ひき → 36ひき =====
+   ・どの なかまも「学びが すすむと」なかまに なる（同じことの くり返しだけでは ふえない）
+   ・prog(m) で「あと どれだけか」を出し、ホームの「つぎの なかま」と ずかんに 見せる */
+const nIslDone = (m, i) => { const isl = ISLANDS[i]; if (!isl) return [0, 1]; const core = isl.stages.filter(s => !s.extra); return [core.filter(s => cleared(m, s.id)).length, core.length]; };
+const nDays = m => Object.keys((m && m.days) || {}).length;
+const nClear = m => ALL_STAGES.filter(s => cleared(m, s.id)).length;
+const nPerfect = m => ALL_STAGES.filter(s => ((m && m.stars[s.id]) || 0) >= 3).length;
+const nKyo = m => ALL_STAGES.filter(s => /^9-/.test(s.id) && cleared(m, s.id)).length;
+const STAR_MAX = () => ALL_STAGES.length * 3;
+const islFriend = (id, name, idx, say) => ({ id, name, group: 'nushi', how: `「${ISLANDS[idx] ? ISLANDS[idx].name : ''}」の ステージを ぜんぶ クリア`, cond: m => { const [a, b] = nIslDone(m, idx); return a >= b; }, prog: m => { const [a, b] = nIslDone(m, idx); return [a, b, r => `ステージを あと ${r}つ`]; }, say });
+const NEW_FRIENDS = [
+  islFriend('gamego', 'トオンガメ', 0, 'ト音記号は ぼくの せなかと 同じ形'),
+  islFriend('yasumi', 'ヤスミフクロウ', 1, '休符も 音楽の なかまだホー'),
+  islFriend('hamokani', 'ハモニカニ', 2, 'けんばんは チョキで ひくカニ！'),
+  islFriend('fueyagi', 'フエヤギ', 3, 'あなを しっかり ふさいでね'),
+  islFriend('kasen', 'カセンリュウ', 4, '線を こえても こわくないよ'),
+  islFriend('sharpen', 'シャープペンギン', 5, '♯で 半音 上がるペン！'),
+  islFriend('kikimimi', 'キキミミギツネ', 6, '耳を すませば 聞こえるよ'),
+  islFriend('takara', 'タカラドラゴン', 7, 'いちばんの たからは 読める力だ'),
+  islFriend('utahon', 'ウタノホン', 8, 'みんなの 歌が つまっているよ'),
+  { id: 'hiyoko', name: 'チリンヒヨコ', group: 'koko', how: '「きょうの チャレンジ」を 1日', cond: m => nDays(m) >= 1, prog: m => [nDays(m), 1, r => 'きょうの チャレンジを 1回'], say: 'チリン！ きょうも はじまるよ' },
+  { id: 'tsukikurage', name: 'ツキクラゲ', group: 'koko', how: '「きょうの チャレンジ」を 10日', cond: m => nDays(m) >= 10, prog: m => [nDays(m), 10, r => `チャレンジを あと ${r}日`], say: 'まいにち 少しずつが いちばん' },
+  { id: 'nijitatsu', name: 'ニジタツ', group: 'koko', how: '「きょうの チャレンジ」を 20日', cond: m => nDays(m) >= 20, prog: m => [nDays(m), 20, r => `チャレンジを あと ${r}日`], say: 'つづけた きみに にじを あげる' },
+  { id: 'hitode', name: 'オンプヒトデ', group: 'koko', how: '★を 10こ あつめる', cond: m => starTotal(m) >= 10, prog: m => [starTotal(m), 10, r => `★を あと ${r}こ`], say: 'ぼくの うでは 5本、五線も 5本！' },
+  { id: 'panda', name: 'ドンドンパンダ', group: 'koko', how: '★を 60こ あつめる', cond: m => starTotal(m) >= 60, prog: m => [starTotal(m), 60, r => `★を あと ${r}こ`], say: 'ドンドン いこう！' },
+  { id: 'metro', name: 'メトロン', group: 'koko', how: '★を 100こ あつめる', cond: m => starTotal(m) >= 100, prog: m => [starTotal(m), 100, r => `★を あと ${r}こ`], say: 'カチ・カチ・カチ… はやさは ぼくに まかせて' },
+  { id: 'goldpitch', name: 'ゴールドピッチ', group: 'koko', how: 'ぜんぶの ステージで ★3つ', cond: m => starTotal(m) >= STAR_MAX(), prog: m => [starTotal(m), STAR_MAX(), r => `★を あと ${r}こ`], say: 'きみは ほんものの ふよみマスター！' },
+  { id: 'iruka', name: 'イルカの ソラ', group: 'chal', how: '1つの ステージで 8問 れんぞく 一回で せいかい', cond: m => (m.bestCombo || 0) >= 8, prog: m => [Math.min(m.bestCombo || 0, 8), 8, r => `れんぞく せいかいを あと ${r}問`], say: 'ジャンプの いきおいで 読もう！' },
+  { id: 'bachi', name: 'バチバチ', group: 'chal', how: '★3つの ステージを 10こ', cond: m => nPerfect(m) >= 10, prog: m => [nPerfect(m), 10, r => `★3つの ステージを あと ${r}こ`], say: 'かんぺき！ ジャーン！' },
+  { id: 'kumo', name: 'ポロンぐも', group: 'chal', how: 'ステージを 20こ クリア', cond: m => nClear(m) >= 20, prog: m => [nClear(m), 20, r => `ステージを あと ${r}こ クリア`], say: '音符の 雨を ふらせるよ' },
+  { id: 'orgel', name: 'オルゴールネズミ', group: 'chal', how: '「うたの図書館」で 3つの 学年を クリア', cond: m => nKyo(m) >= 3, prog: m => [nKyo(m), 3, r => `うたの図書館を あと ${r}つ`], say: 'ねじを まくと 歌いだすよ' },
+  { id: 'kujaku', name: 'ヘオンクジャク', group: 'chal', how: '「ヘ音記号」（先どり）を クリア', cond: m => cleared(m, '6-6'), prog: m => [cleared(m, '6-6') ? 1 : 0, 1, r => '「ヘ音記号」を クリア'], say: 'ひくい音は まかせて' },
+  { id: 'tako', name: 'ハチロクタコ', group: 'chal', how: '「8分の6拍子」（先どり）を クリア', cond: m => cleared(m, '5-8'), prog: m => [cleared(m, '5-8') ? 1 : 0, 1, r => '「8分の6拍子」を クリア'], say: 'イチ・ニ・サン、シ・ゴ・ロク♪' },
+  { id: 'risu', name: 'バイオリンリス', group: 'chal', how: 'ランク「島の 音楽家」に なる', cond: m => rankOf(m.xp || 0) >= 3, prog: m => [m.xp || 0, RANKS[3].xp, r => `けいけんちを あと ${r}`], say: 'しっぽで ひく バイオリンだよ' },
+  { id: 'phoenix', name: 'ファンファ', group: 'chal', how: 'ランク「しまの マエストロ」に なる', cond: m => rankOf(m.xp || 0) >= 5, prog: m => [m.xp || 0, RANKS[5].xp, r => `けいけんちを あと ${r}`], say: 'パパーン！ きみを たたえる ファンファーレ！' }
+];
+// はじめからの 12ひきにも「あと どれだけ」を つける
+const OLD_PROG = {
+  doremin: ['1-2'], tantan: ['2-1'], kenba: ['3-1'], fuelu: ['4-2'], tata: ['5-3'], forte: ['6-1'], mimi: ['7-1'], king: ['8-3']
+};
+FRIENDS.forEach(f => {
+  f.group = f.group || 'hajime';
+  if (OLD_PROG[f.id]) { const sid = OLD_PROG[f.id][0]; f.prog = m => [cleared(m, sid) ? 1 : 0, 1, r => f.how]; }
+  if (f.id === 'kuji') f.prog = m => [starTotal(m), 30, r => `★を あと ${r}こ`];
+  if (f.id === 'hoshi') f.prog = m => [nDays(m), 5, r => `チャレンジを あと ${r}日`];
+  if (f.id === 'kai') f.prog = m => [ISLANDS.map((_, i) => i).filter(i => islandCleared(m, i)).length, 3, r => `島を あと ${r}つ ぜんぶ クリア`];
+});
+FRIENDS.push(...NEW_FRIENDS);
+const FGROUPS = [['hajime', 'はじめの なかま', 'ステージを クリアすると 会える'], ['nushi', '島の ぬし', '島の ステージを ぜんぶ クリアすると 会える'], ['koko', 'コツコツの なかま', '★や 毎日の チャレンジで 会える'], ['chal', 'チャレンジの なかま', 'れんぞく せいかいや ランクで 会える']];
+ISLAND_FRIEND.i9 = 'utahon';
+const hasF = (m, id) => !!(m && m.friends && m.friends[id]);
+/* つぎに 会えそうな なかま（あと少しの じゅん） */
+function nextFriends(m, k) {
+  if (!m) return [];
+  return FRIENDS.filter(f => !hasF(m, f.id) && f.prog).map(f => { const [c, g, lab] = f.prog(m); return { f, c: Math.min(c, g), g, rest: Math.max(0, g - c), lab, r: g ? Math.min(c, g) / g : 0 }; })
+    .sort((a, b) => b.r - a.r || a.rest - b.rest).slice(0, k || 1);
+}
+/* いっしょに つれていく なかま */
+function buddyOf(m) { const id = m && m.buddy; return id && hasF(m, id) ? FRIENDS.find(f => f.id === id) : null; }
+function friendDialog(f) {
+  const me = Store.me; const has = hasF(me, f.id);
+  if (!has) {
+    const p = f.prog ? f.prog(me) : null;
+    const left = p ? `\n\nいま ${Math.min(p[0], p[1])} / ${p[1]}（${p[2](Math.max(0, p[1] - p[0]))}）` : '';
+    return dialog({ art: friendSvg(f, true).replace('<svg ', '<svg width="140" '), title: '？？？', text: 'なかまに なる 方法：\n' + f.how + left, buttons: [{ label: 'がんばる！', value: true, cls: 'sun' }] });
+  }
+  try { Audio2.note(72 + rnd(8), 0.3); } catch (e) { }
+  const isB = me.buddy === f.id;
+  return dialog({ art: friendSvg(f).replace('<svg ', '<svg width="170" class="bob" '), title: f.name, text: '「' + f.say + '」', buttons: isB ? [{ label: 'つれていくのを やめる', value: 'off', cls: 'ghost small' }, { label: 'とじる', value: true, cls: 'sun' }] : [{ label: 'いっしょに つれていく', value: 'on', cls: 'sun' }, { label: 'とじる', value: true, cls: 'ghost' }] })
+    .then(v => { if (v === 'on') { me.buddy = f.id; Store.save(); toastBuddy(f); } else if (v === 'off') { me.buddy = null; Store.save(); } if (v === 'on' || v === 'off') friendsScreen(); });
+}
+function toastBuddy(f) {
+  const t = h('div', { class: 'btoast' }, h('img', { src: artUrl('f_' + f.id), alt: '' }), h('span', null, `${f.name}と いっしょに ぼうけん！`));
+  document.body.appendChild(t); setTimeout(() => t.remove(), 2600);
+}
+/* ずかん（作り直し） */
+function friendsScreen() {
+  go(scr => {
+    scr.classList.add('zukan');
+    scr.appendChild(topBar('なかまずかん', { back: homeScreen }));
+    queueCele(checkFriends().map(f => ({ type: 'friend', id: f.id })));
+    setTimeout(flushCele, 600);
+    const me = Store.me || { friends: {}, stars: {} };
+    const n = FRIENDS.filter(f => hasF(me, f.id)).length;
+    const wrap = h('div', { class: 'wrap' });
+    const bd = buddyOf(me);
+    wrap.appendChild(h('div', { class: 'zhead' },
+      h('div', { class: 'zcount' }, h('b', null, n), h('small', null, ' / ' + FRIENDS.length + ' ひき')),
+      h('div', { class: 'xpbar' }, h('i', { style: { width: (n / FRIENDS.length * 100) + '%' } })),
+      h('div', { class: 'zbuddy' }, bd ? [h('img', { src: artUrl('f_' + bd.id), alt: '' }), h('span', null, `いっしょに いる なかま：${bd.name}`)] : h('span', null, 'なかまを タップすると「いっしょに つれていく」が えらべるよ'))));
+    const nx = nextFriends(me, 3);
+    if (nx.length) wrap.appendChild(h('div', { class: 'znext' }, h('div', { class: 'h2' }, 'もうすぐ 会える なかま'),
+      h('div', { class: 'znrow' }, nx.map(x => h('button', { class: 'nfcard', onclick: tap(() => friendDialog(x.f)) },
+        h('img', { src: artUrl('f_' + x.f.id), alt: '', class: 'sil' }),
+        h('small', null, x.lab(x.rest)),
+        h('div', { class: 'xpbar slim' }, h('i', { style: { width: (x.r * 100) + '%' } })))))));
+    FGROUPS.forEach(([gid, gname, gsub]) => {
+      const list = FRIENDS.filter(f => f.group === gid);
+      const got = list.filter(f => hasF(me, f.id)).length;
+      wrap.appendChild(h('div', { class: 'sechd' }, h('b', null, gname), h('small', null, `${got} / ${list.length}　${gsub}`)));
+      const grid = h('div', { class: 'fgrid' });
+      list.forEach(f => {
+        const has = hasF(me, f.id);
+        const p = !has && f.prog ? f.prog(me) : null;
+        grid.appendChild(h('button', { class: 'fcard' + (has ? '' : ' locked') + (me.buddy === f.id ? ' buddy' : ''), onclick: tap(() => friendDialog(f)) },
+          h('div', { class: 'fart' }, h('img', { src: artUrl('f_' + f.id), alt: '', loading: 'lazy', class: has ? '' : 'sil' })),
+          h('b', null, has ? f.name : '？？？'),
+          h('small', null, has ? f.say : f.how),
+          p && p[1] > 1 ? h('div', { class: 'xpbar slim' }, h('i', { style: { width: (Math.min(p[0], p[1]) / p[1] * 100) + '%' } })) : null,
+          me.buddy === f.id ? h('span', { class: 'btag' }, 'いっしょ') : null));
+      });
+      wrap.appendChild(grid);
+    });
+    scr.appendChild(h('div', { class: 'body' }, wrap));
+  });
+}
+
+/* なかまが いちどに 何びきも ふえたときは、1つの 画面に まとめて 見せる（前から使っている子が 開いたとき など） */
+async function flushCele() {
+  const me = Store.me; if (!me || celeBusy || !me.pending || !me.pending.length) return;
+  celeBusy = true;
+  try {
+    while (me.pending.length) {
+      let k = 0; while (k < me.pending.length && me.pending[k].type === 'friend') k++;
+      if (k >= 3) {
+        const fs = me.pending.splice(0, k).map(it => FRIENDS.find(f => f.id === it.id)).filter(Boolean); Store.save();
+        Audio2.fanfare(); confetti(70);
+        const grid = h('div', { class: 'manyf' }, fs.map(f => h('div', null, h('img', { src: artUrl('f_' + f.id), alt: '' }), h('small', null, f.name))));
+        await dialog({ title: `あたらしい なかまが ${fs.length}ひき！`, body: grid, text: 'ずかんで くわしく 見られるよ。', buttons: [{ label: 'やったー！', value: true, cls: 'sun big' }], outside: false });
+        continue;
+      }
+      const it = me.pending.shift(); Store.save();
+      const item = it.type === 'friend' ? { type: 'friend', f: FRIENDS.find(f => f.id === it.id) } : it;
+      if (item.type === 'friend' && !item.f) continue;
+      await celebrate([item]);
+    }
+  } finally { celeBusy = false; }
 }
 
 /* ===== 先生の画面 ===== */
