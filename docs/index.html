@@ -619,6 +619,30 @@ img.sil{filter:brightness(0) opacity(.22)}
   </div>
 </div>
 <div id="app"></div>
+<script>
+/* 開けなかったとき、トップ画面のまま止まらないように（古い書き方だけで書く） */
+(function () {
+  function stuck(why) {
+    if (window.__started) return;
+    window.__started = true;
+    var sp = document.getElementById('splash'); if (sp && sp.parentNode) sp.parentNode.removeChild(sp);
+    var a = document.getElementById('app');
+    if (a) a.innerHTML = '<div style="max-width:640px;margin:40px auto;padding:24px;background:#fff;border-radius:20px;font-size:18px;line-height:1.8;font-family:sans-serif;color:#17456b">' +
+      '<div style="font-size:22px;font-weight:bold;margin-bottom:8px">アプリを 読みこめませんでした</div>' +
+      'ページを 開き直してみてください。<br>それでも 開かないときは、学校の ネットの 決まりで このページ（github.io）の 一部が 止められている かもしれません。先生に つたえてください。' +
+      '<div style="margin-top:12px;font-size:13px;color:#888">' + why + '</div></div>';
+  }
+  window.__onpuStuck = stuck;
+  window.addEventListener('error', function (e) {
+    if (window.__started) return;
+    var t = e && e.target;
+    if (t && t.tagName === 'SCRIPT' && /three/.test(t.getAttribute('src') || '')) return;
+    if (t && t.tagName === 'SCRIPT') stuck('部品を 読みこめませんでした：' + (t.getAttribute('src') || ''));
+    else stuck('とちゅうで 止まりました：' + ((e && e.message) || ''));
+  }, true);
+  setTimeout(function () { stuck('読みこみに 時間が かかりすぎました'); }, 30000);
+})();
+</script>
 <script src="vendor/vexflow-4.2.3.js"></script>
 <script src="vendor/three-0.149.0.min.js"></script>
 <script>
@@ -2832,7 +2856,7 @@ function startApp() {
   const goOn = () => {
     if (Store.data.current) homeScreen(); else welcomeScreen();
   };
-  if (window.__noSplash) { sp.remove(); goOn(); return; }
+  if (window.__noSplash) { if (sp) sp.remove(); goOn(); return; }
   // ★17 トップ画面を2.8秒見せてから、ふわっと消す
   setTimeout(() => { goOn(); sp.classList.add('out'); setTimeout(() => sp.remove(), 650); }, 2800);
 }
@@ -4649,9 +4673,12 @@ function splashArt() {
   const art = document.querySelector('#splash .art');
   if (art) art.innerHTML = splashArt();
   if (!window.Vex) {
-    document.getElementById('app').innerHTML = '<div style="padding:40px;text-align:center;font-size:20px">楽譜の部品を 読みこめませんでした。ページを 開き直してください。</div>';
+    if (window.__onpuStuck) window.__onpuStuck('楽譜の部品（vexflow）を 読みこめませんでした');
     return;
   }
+  // 時間切れの案内が先に出ていても、あとから読みこめたら そのまま始める
+  if (window.__started && !document.getElementById('splash')) { document.getElementById('app').innerHTML = ''; window.__noSplash = true; }
+  window.__started = true;
   startApp();
 })();
 
