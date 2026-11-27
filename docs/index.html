@@ -1145,6 +1145,26 @@ function renderStaff(target, o) {
   return api;
 }
 
+/* 楽譜の大きさを 数字で入れる（2026-11-27 先生からの知らせ）
+   古いiPadのSafariは、楽譜のはばと高さを auto にまかせると 高さが0になり、白い線だけに なる。
+   mh：高さの上限（px）を返す関数。なければ 上限なし */
+function sizeStaffPx(api, box, maxScale, mh) {
+  const fit = () => {
+    if (!api.svg.isConnected) { window.removeEventListener('resize', fit); return; }
+    const cs = getComputedStyle(box);
+    const aw = (box.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0)) || (window.innerWidth - 40);
+    const lim = mh ? mh() : Infinity;
+    const k = Math.max(0.3, Math.min(maxScale || 1.8, aw / api.total, lim / api.height));
+    api.svg.style.setProperty('width', Math.floor(api.total * k) + 'px', 'important');
+    api.svg.style.setProperty('height', Math.floor(api.height * k) + 'px', 'important');
+    api.svg.style.setProperty('max-height', 'none', 'important');
+    api.svg.style.setProperty('max-width', 'none', 'important');
+  };
+  fit(); requestAnimationFrame(fit); setTimeout(fit, 300);
+  window.addEventListener('resize', fit);
+  return fit;
+}
+
 /* 記号だけを大きくかく（強弱・フェルマータ など） */
 function symbolSvg(kind) {
   const W = 200, H = 120;
@@ -3079,7 +3099,7 @@ function stageScreen(st) {
       const vis = h('div', { class: 'stage', style: { marginTop: '16px' } });
       let api = null;
       const vbox = h('div', { class: 'learn-visual' });
-      if (c.staff) { const sbox = h('div', { class: 'vf', style: { flex: c.rec ? '1 1 150px' : '1 1 300px' } }); vbox.appendChild(sbox); api = drawStaff(sbox, Object.assign({ scale: c.staff.notes.length <= 2 ? 2.8 : 2.1, fit: true }, c.staff)); if (c.staff.notes.length <= 10) sbox.classList.add('one'); }
+      if (c.staff) { const sbox = h('div', { class: 'vf', style: { flex: c.rec ? '1 1 150px' : '1 1 300px' } }); vbox.appendChild(sbox); api = drawStaff(sbox, Object.assign({ scale: c.staff.notes.length <= 2 ? 2.8 : 2.1, fit: true }, c.staff)); if (c.staff.notes.length <= 10) { sbox.classList.add('one'); sizeStaffPx(api, sbox, c.staff.scale || (c.staff.notes.length <= 2 ? 2.8 : 2.1), () => window.innerHeight * 0.30); } }
       if (c.rec) vbox.appendChild(h('div', { class: 'rec', style: { width: 'min(170px,40vw)' } }, svgEl(recorderSvg(c.rec.p || fingering(c.rec.s), { nums: true, hl: c.rec.hl, label: c.rec.s != null ? jname(c.rec.s, null, 'rec') : '' }))));
       if (c.syms) c.syms.forEach(k => { const d = DYN.concat(HAIR).find(x => x.k === k); vbox.appendChild(h('div', { class: 'center', style: { width: 'min(170px,40vw)' } }, svgEl(symbolSvg(k)), h('div', { style: { fontWeight: 700, fontSize: '.85em' } }, d.yomi), h('div', { class: 'em', style: { fontSize: '.85em' } }, d.imi))); });
       if (c.visual) c.visual(vbox);
@@ -3455,6 +3475,7 @@ const Q_TYPES = {
     const sb = h('div', { class: 'stage rhstage' }); box.appendChild(sb);
     const sv = h('div', { class: 'vf' }); sb.appendChild(sv);
     const api = drawStaff(sv, { notes: q.pattern, time: q.time, clef: false, scale: 1.8, fit: true, narrowNoteW: 22, narrowMinScale: 0.9 });
+    sizeStaffPx(api, sb, 1.8, () => window.innerHeight <= 860 ? window.innerHeight * 0.24 : Infinity);
     const count = h('div', { class: 'count' });
     const drum = h('div', { class: 'drum off' }, 'たたく');
     const msg = h('div', { class: 'center h2', style: { minHeight: '1.6em' } });
